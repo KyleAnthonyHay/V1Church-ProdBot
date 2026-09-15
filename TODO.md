@@ -12,7 +12,8 @@ Updated 2026-09-15. See README.md for setup and VERIFICATION.md for evidence.
 - [x] Campus/date runbook checklist and reviewed chat fix proposals.
 - [x] Device search, group controls, device YAML, fullscreen and PNG export controls.
 - [x] Documentation import/export, individual deletion and campus clearing.
-- [x] Collapsible mobile conversation sidebar and light/dark theme switch.
+- [x] Sidebar + chat workspace layout (2026-09-15 redesign), collapsible on desktop and mobile, light/dark theme switch.
+- [x] Streamed reasoning summaries shown as a collapsible "Thinking" block in chat.
 - [x] Unit/backend tests, context budgets, lazy-loaded views and markdown rendering.
 - [x] CI configuration and production frontend hosting on Vercel.
 

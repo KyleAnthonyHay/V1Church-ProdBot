@@ -16,6 +16,13 @@ export const sourceKindValidator = v.union(
   v.literal("pdf"),
 );
 
+// Which admin category a note was added under. Generation still reads every
+// ready note for the campus; the topic only organises the admin view.
+export const sourceTopicValidator = v.union(
+  v.literal("wiring"),
+  v.literal("pitfalls"),
+);
+
 export default defineSchema({
   campuses: defineTable({
     slug: v.string(),
@@ -28,6 +35,7 @@ export default defineSchema({
     campusId: v.optional(v.id("campuses")),
     title: v.string(),
     kind: sourceKindValidator,
+    topic: v.optional(sourceTopicValidator),
     storageId: v.optional(v.id("_storage")),
     text: v.optional(v.string()),
     status: v.union(
@@ -69,6 +77,22 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_campus", ["campusId"]),
 
+  // Describe-and-draw chats in the wiring workspace. Several per campus; the
+  // canvas holds the drawing, so these only keep the conversation. Bounded.
+  wiringChats: defineTable({
+    campusId: v.optional(v.id("campuses")),
+    title: v.string(),
+    turns: v.array(
+      v.object({
+        role: v.union(v.literal("user"), v.literal("assistant")),
+        text: v.string(),
+        error: v.optional(v.boolean()),
+      }),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_campus_updated", ["campusId", "updatedAt"]),
+
   checklist: defineTable({
     campusId: v.id("campuses"),
     date: v.string(),
@@ -101,11 +125,15 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    // Streamed reasoning summary from the model (assistant messages only).
+    reasoning: v.optional(v.string()),
     status: v.union(
       v.literal("streaming"),
       v.literal("done"),
       v.literal("error"),
     ),
     createdAt: v.number(),
+    // When an assistant answer finished (shown as "Worked for Ns").
+    finishedAt: v.optional(v.number()),
   }).index("by_conversation", ["conversationId"]),
 });

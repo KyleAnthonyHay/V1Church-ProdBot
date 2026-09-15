@@ -52,6 +52,17 @@ export const removeConversation = mutation({
   },
 });
 
+/** Rename a conversation from the sidebar. */
+export const renameConversation = mutation({
+  args: { id: v.id("conversations"), title: v.string() },
+  handler: async (ctx, { id, title }) => {
+    await getConversation(ctx, id);
+    const clean = title.replace(/\s+/g, " ").trim().slice(0, 120);
+    if (!clean) throw new Error("Give the chat a name.");
+    await ctx.db.patch(id, { title: clean });
+  },
+});
+
 export const listMessages = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
@@ -137,13 +148,21 @@ export const updateAssistant = internalMutation({
   args: {
     id: v.id("messages"),
     content: v.string(),
+    reasoning: v.optional(v.string()),
     status: v.union(
       v.literal("streaming"),
       v.literal("done"),
       v.literal("error"),
     ),
   },
-  handler: async (ctx, { id, content, status }) => {
-    if (await ctx.db.get(id)) await ctx.db.patch(id, { content, status });
+  handler: async (ctx, { id, content, reasoning, status }) => {
+    if (await ctx.db.get(id))
+      await ctx.db.patch(id, {
+        content,
+        status,
+        ...(reasoning !== undefined ? { reasoning } : {}),
+        // Record when the answer finished, for "Worked for Ns".
+        ...(status !== "streaming" ? { finishedAt: Date.now() } : {}),
+      });
   },
 });

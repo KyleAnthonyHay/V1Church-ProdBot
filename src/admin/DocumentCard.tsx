@@ -1,24 +1,45 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
+import { PitfallQuickAdd } from "./PitfallQuickAdd";
+const WiringWorkspace = lazy(() =>
+  import("./WiringWorkspace").then((m) => ({
+    default: m.WiringWorkspace,
+  })),
+);
+import { PitfallList } from "./PitfallList";
 import {
-  CAMPUS_DOC_KINDS,
-  SHARED_DOC_KINDS,
   DOC_META,
+  nextPitfallId,
+  parsePitfallDetails,
+  pitfallsToMarkdown,
   parsePitfalls,
   parseRunbookSteps,
   pitfallsTouching,
   validatePitfallRefs,
   type DocKind,
 } from "@shared/docs";
-import { diffWiring, parseWiringYaml, type WiringDiff } from "@shared/wiring";
-import { DocumentTools } from "./DocumentTools";
-import { FixReviewPanel } from "./FixReviewPanel";
+import {
+  diffWiring,
+  parseWiringYaml,
+  wiringToYaml,
+  type WiringDiff,
+} from "@shared/wiring";
 const WiringDiagram = lazy(() =>
-  import("@/components/WiringDiagram").then((m) => ({
-    default: m.WiringDiagram,
+  import("@/components/WiringExplorer").then((m) => ({
+    default: m.WiringExplorer,
   })),
+);
+const PitfallsEditor = lazy(() =>
+  import("./PitfallsEditor").then((m) => ({ default: m.PitfallsEditor })),
 );
 import { Response } from "@/components/ui/response";
 import { Button } from "@/components/ui/button";
@@ -32,9 +53,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { downloadText } from "@/lib/download";
 import {
   AlertTriangle,
   Check,
+  Download,
   History,
   Loader2,
   Save,
@@ -42,73 +66,61 @@ import {
   X,
   FileCode2,
   RotateCcw,
+  Pencil,
+  Network,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 type DocRow = Doc<"documents">;
+type WiringSelection = import("./WiringEditor").Selection;
+type EditSelection = WiringSelection | { kind: "pitfall"; id: string };
 
-export function DocumentsPanel({
-  campusId,
-  scope,
-  scopeName,
-}: {
-  campusId: Id<"campuses"> | undefined;
-  scope: "campus" | "shared";
-  scopeName: string;
-}) {
-  const docs = useQuery(api.documents.listForCampus, { campusId });
-  const sources = useQuery(api.sources.list, { campusId });
-  const kinds: readonly DocKind[] =
-    scope === "campus" ? CAMPUS_DOC_KINDS : SHARED_DOC_KINDS;
-  const byKind = useMemo(
-    () => new Map((docs ?? []).map((d) => [d.kind as DocKind, d])),
-    [docs],
-  );
-  const readySources = sources?.filter((s) => s.status === "ready").length ?? 0;
-
-  if (docs === undefined) return null;
-
-  return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4">
-      <p className="text-muted-foreground text-sm">
-        {readySources === 0
-          ? `No source material for ${scopeName} yet. Add some under Sources, or write the documents by hand below.`
-          : `${readySources} source(s) ready. Generate a draft, review it, then approve. Approving keeps the previous version as a revision.`}
-      </p>
-      <DocumentTools
-        campusId={campusId}
-        scopeName={scopeName}
-        docs={docs}
-        hasSources={readySources > 0}
-      />
-      {campusId && <FixReviewPanel campusId={campusId} />}
-      {kinds.map((kind) => (
-        <DocCard
-          key={kind}
-          kind={kind}
-          campusId={campusId}
-          doc={byKind.get(kind)}
-          allDocs={byKind}
-          hasSources={readySources > 0}
-        />
-      ))}
-    </div>
-  );
-}
-
-function DocCard({
+/**
+ * One document: approved preview, AI draft review, notes to generate from,
+ * and a raw editor for hand edits. The wiring document is edited in a
+ * full-screen workspace (canvas plus AI chat) instead of notes. Generated
+ * content stays a draft until approved; approving keeps the previous version
+ * as a revision.
+ */
+export function DocumentCard({
   kind,
   campusId,
   doc,
   allDocs,
   hasSources,
+  title,
+  description,
+  icon,
+  notes,
+  bare,
 }: {
   kind: DocKind;
   campusId: Id<"campuses"> | undefined;
   doc: DocRow | undefined;
   allDocs: Map<DocKind, DocRow>;
   hasSources: boolean;
+  title?: string;
+  description?: string;
+  icon?: ReactNode;
+  /** Category-specific notes box; generation reads from these. */
+  notes?: ReactNode;
+  /** Render without the card frame (when shown inside a panel). */
+  bare?: boolean;
 }) {
   const meta = DOC_META[kind];
+  const [showEditor, setShowEditor] = useState(false);
+  const [editDiagram, setEditDiagram] = useState(false);
+  const [editSelection, setEditSelection] = useState<EditSelection | null>(
+    null,
+  );
+  /**
+   * Wiring card: the full-screen workspace, opened on the whole campus (with
+   * the clicked device or connection selected) or inside one device.
+   */
+  const [workspace, setWorkspace] = useState<{
+    parentId: string | null;
+    selection: WiringSelection | null;
+  } | null>(null);
   const save = useMutation(api.documents.save);
   const remove = useMutation(api.documents.remove);
   const approve = useMutation(api.documents.approveDraft);
@@ -117,7 +129,6 @@ function DocCard({
   const savedContent = doc?.content ?? "";
   const [editor, setEditor] = useState(savedContent);
   const [note, setNote] = useState("");
-  const [instructions, setInstructions] = useState("");
   const [showFormat, setShowFormat] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -177,6 +188,21 @@ function DocCard({
     }
   }
 
+  /** Remove one approved pitfall (the dialog has already confirmed). */
+  function deletePitfall(id: string) {
+    const { preamble, pitfalls: existing } = parsePitfallDetails(savedContent);
+    const removed = existing.find((p) => p.id === id);
+    return save({
+      campusId,
+      kind,
+      content: pitfallsToMarkdown(
+        existing.filter((p) => p.id !== id),
+        preamble,
+      ),
+      note: `Removed ${id}${removed ? `: ${removed.title}` : ""}`,
+    });
+  }
+
   const status = doc?.generating
     ? "generating"
     : doc?.draft !== undefined
@@ -186,12 +212,16 @@ function DocCard({
         : "empty";
 
   return (
-    <Card>
+    // One block, so the page's spacing sits around the card and its
+    // "Last saved" line together.
+    <div>
+    <Card className={cn(bare && "bg-transparent shadow-none")}>
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 text-base">
-              {meta.title}
+              {icon}
+              {title ?? meta.title}
               {status === "empty" && (
                 <Badge variant="outline">Not documented</Badge>
               )}
@@ -209,9 +239,18 @@ function DocCard({
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>{meta.description}</CardDescription>
+            <CardDescription>{description ?? meta.description}</CardDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {/* Hidden for now; undecided whether to keep them.
+            <Button
+              variant={showEditor ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setShowEditor((s) => !s)}
+              title={`Edit the ${meta.format === "yaml" ? "YAML" : "markdown"} by hand`}
+            >
+              <Pencil className="size-4" /> {showEditor ? "Close editor" : "Edit by hand"}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -219,10 +258,14 @@ function DocCard({
             >
               <FileCode2 className="size-4" /> Format
             </Button>
+            */}
             {doc && (
+              // Outlined like "Edit diagram" so their edges line up; bold,
+              // at the size of the "Approved version" line.
               <Button
-                variant="ghost"
+                variant={showRevisions ? "secondary" : "outline"}
                 size="sm"
+                className="text-xs font-bold"
                 onClick={() => setShowRevisions((s) => !s)}
               >
                 <History className="size-4" /> History
@@ -239,51 +282,114 @@ function DocCard({
         )}
         {showRevisions && doc && <RevisionList documentId={doc._id} />}
 
-        {/* Generate */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Optional instructions for the AI (e.g. 'only update the keys section')"
-            className="max-w-md"
+        {/* Pitfalls: the three fields, always visible */}
+        {kind === "pitfalls" && !showEditor && !editDiagram && (
+          <PitfallQuickAdd
+            nextId={nextPitfallId(parsePitfallDetails(savedContent).pitfalls)}
+            nodes={currentGraph?.nodes ?? []}
+            onAdd={async (pitfall) => {
+              const { preamble, pitfalls: existing } =
+                parsePitfallDetails(savedContent);
+              await save({
+                campusId,
+                kind,
+                content: pitfallsToMarkdown([...existing, pitfall], preamble),
+                note: `Added ${pitfall.id}: ${pitfall.title}`,
+              });
+            }}
           />
-          <Button
-            variant="secondary"
-            disabled={
-              busy !== null ||
-              Boolean(doc?.generating) ||
-              (!hasSources && !savedContent.trim() && !instructions.trim())
-            }
-            onClick={() =>
-              void run("generate", () =>
-                generate({
+        )}
+
+        {/* Wiring workspace: full-screen canvas plus the diagram chat */}
+        {kind === "wiring" && workspace && (
+          <Suspense fallback={null}>
+            <WiringWorkspace
+              campusId={campusId}
+              graph={currentGraph ?? { nodes: [], edges: [] }}
+              parentId={workspace.parentId}
+              initialSelection={workspace.selection}
+              pitfalls={pitfalls}
+              onClose={() => setWorkspace(null)}
+              onSave={async (graph) => {
+                const parent = workspace.parentId
+                  ? currentGraph?.nodes.find((n) => n.id === workspace.parentId)
+                  : undefined;
+                await save({
                   campusId,
                   kind,
-                  instructions: instructions || undefined,
-                }),
-              )
+                  content: wiringToYaml(graph),
+                  note: parent
+                    ? `Internal wiring of ${parent.label}`
+                    : "Edited in the diagram workspace",
+                });
+              }}
+            />
+          </Suspense>
+        )}
+
+        {/* Approved content */}
+        {!showEditor && kind === "pitfalls" && editDiagram ? (
+          <Suspense fallback={<p className="p-4">Loading editor…</p>}>
+            <PitfallsEditor
+              content={savedContent}
+              nodes={currentGraph?.nodes ?? []}
+              initialOpen={
+                editSelection?.kind === "pitfall" ? editSelection.id : undefined
+              }
+              onCancel={() => setEditDiagram(false)}
+              onSave={async (content) => {
+                await save({
+                  campusId,
+                  kind,
+                  content,
+                  note: "Edited in the pitfalls editor",
+                });
+                setEditDiagram(false);
+              }}
+            />
+          </Suspense>
+        ) : !showEditor ? (
+          <ApprovedPreview
+            kind={kind}
+            content={savedContent}
+            graph={currentGraph}
+            pitfalls={pitfalls}
+            updatedAt={doc?.updatedAt}
+            onEdit={
+              kind === "wiring"
+                ? (selection) =>
+                    setWorkspace({
+                      parentId: null,
+                      selection:
+                        selection && selection.kind !== "pitfall"
+                          ? selection
+                          : null,
+                    })
+                : kind === "pitfalls"
+                  ? (selection) => {
+                      setEditSelection(selection ?? null);
+                      setEditDiagram(true);
+                    }
+                  : undefined
             }
-            title={
-              hasSources
-                ? "Draft this document from the sources"
-                : "Add sources first"
+            onAddInternal={
+              kind === "wiring"
+                ? (id) => setWorkspace({ parentId: id, selection: null })
+                : undefined
             }
-          >
-            {busy === "generate" || doc?.generating ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Sparkles className="size-4" />
-            )}
-            {savedContent.trim()
-              ? "Update draft from sources"
-              : "Generate from sources"}
-          </Button>
-          {doc?.generateError && (
-            <span className="text-destructive text-xs">
-              {doc.generateError}
-            </span>
-          )}
-        </div>
+            onDeletePitfall={kind === "pitfalls" ? deletePitfall : undefined}
+          />
+        ) : null}
+
+        {/* Notes + generate (wiring is drawn in the workspace instead) */}
+        {notes && kind !== "pitfalls" && kind !== "wiring" ? (
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="text-sm font-medium">
+              {savedContent.trim() ? "Update from notes" : "Start from notes"}
+            </div>
+            {notes}
+          </div>
+        ) : null}
 
         {/* Draft review */}
         {doc?.draft !== undefined && (
@@ -305,12 +411,13 @@ function DocCard({
         )}
 
         {/* Editor */}
+        {showEditor && (
         <div className="space-y-2">
           <Textarea
             value={editor}
             onChange={(e) => setEditor(e.target.value)}
             rows={kind === "wiring" ? 16 : 12}
-            placeholder={`Nothing here yet. Generate from sources or write it by hand in the format shown under "Format".`}
+            placeholder={`Nothing here yet. Write it in the format shown under "Format", or generate a draft from notes.`}
             className="font-mono text-xs"
             spellCheck={false}
           />
@@ -390,10 +497,138 @@ function DocCard({
               </span>
             )}
           </div>
-          {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
+        )}
+        {error && <p className="text-destructive text-sm">{error}</p>}
       </CardContent>
     </Card>
+    {/* Approved pitfalls: searchable, scrolling list under the card. */}
+    {kind === "pitfalls" && !editDiagram && !showEditor && (
+      <section className="mt-4" aria-label="Approved pitfalls">
+        <PitfallList
+          content={savedContent}
+          onEdit={(id) => {
+            setEditSelection({ kind: "pitfall", id });
+            setEditDiagram(true);
+          }}
+          onDelete={deletePitfall}
+        />
+      </section>
+    )}
+    {/* When the approved content was last saved, under the card on the right. */}
+    {kind === "wiring" && doc?.updatedAt && savedContent.trim() && (
+      <p className="text-muted-foreground mt-2 text-right text-xs">
+        Approved version, last saved {new Date(doc.updatedAt).toLocaleString()}
+      </p>
+    )}
+    </div>
+  );
+}
+
+/** What is approved right now, rendered the way volunteers will see it. */
+function ApprovedPreview({
+  kind,
+  content,
+  graph,
+  pitfalls,
+  updatedAt,
+  onEdit,
+  onAddInternal,
+  onDeletePitfall,
+}: {
+  kind: DocKind;
+  content: string;
+  /** Pitfalls: remove one entry from the approved document. */
+  onDeletePitfall?: (id: string) => Promise<unknown>;
+  graph: ReturnType<typeof parseWiringYaml>["graph"];
+  pitfalls: ReturnType<typeof parsePitfalls>;
+  updatedAt: number | undefined;
+  /** Opens the structured editor, optionally on a clicked item. */
+  onEdit?: (selection?: EditSelection) => void;
+  /** Wiring: start adding internal wiring to this device. */
+  onAddInternal?: (id: string) => void;
+}) {
+  if (!content.trim()) {
+    // Pitfalls list (and its empty state) is drawn under the card instead.
+    if (kind === "pitfalls") return null;
+    if (kind === "wiring" && onEdit)
+      return (
+        <EmptyState icon={<Network className="size-5" />}>
+          <p>
+            No diagram yet. Open the workspace to describe the wiring to the AI
+            or build it by hand.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => onEdit()}>
+            <Pencil className="size-4" /> Build diagram
+          </Button>
+        </EmptyState>
+      );
+    return (
+      <p className="text-muted-foreground text-sm">
+        Nothing approved yet. Add notes below and generate a draft, or use
+        "Edit by hand".
+      </p>
+    );
+  }
+  // Pitfalls list is drawn under the card, like the links list.
+  if (kind === "pitfalls" && onEdit) return null;
+  return (
+    <div className="space-y-2">
+      {kind === "wiring" && graph ? (
+        <div className="bg-background h-[360px] overflow-hidden rounded-md border">
+          <Suspense fallback={<p className="p-4">Loading diagram…</p>}>
+            <WiringDiagram
+              graph={graph}
+              pitfalls={pitfalls}
+              onSelect={(id) => id && onEdit?.({ kind: "node", id })}
+              onSelectEdge={(index) =>
+                index !== null && onEdit?.({ kind: "edge", index })
+              }
+              nodeActions={
+                onAddInternal
+                  ? {
+                      edit: (id) => onEdit?.({ kind: "node", id }),
+                      addInternal: onAddInternal,
+                    }
+                  : undefined
+              }
+            />
+          </Suspense>
+        </div>
+      ) : DOC_META[kind].format === "yaml" ? (
+        <pre className="bg-muted/40 max-h-80 overflow-auto rounded-md p-3 font-mono text-xs">
+          {content}
+        </pre>
+      ) : (
+        <div className="bg-background max-h-80 overflow-auto rounded-md border p-3 text-sm">
+          <Response>{content}</Response>
+        </div>
+      )}
+      {onEdit && (
+        <div className="flex items-center justify-end gap-3">
+          {kind === "wiring" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                downloadText(
+                  content,
+                  "wiring-diagram.yaml",
+                  "application/yaml;charset=utf-8",
+                )
+              }
+            >
+              <Download className="size-4" />
+              Export YAML
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => onEdit()}>
+            <Pencil className="size-4" />
+            {kind === "wiring" ? "Edit diagram" : "Edit pitfalls"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -478,7 +713,7 @@ function DraftPanel({
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        Sources:{" "}
+        Notes used:{" "}
         {doc.draftSourceIds?.length
           ? doc.draftSourceIds
               .map(
@@ -486,7 +721,7 @@ function DraftPanel({
                   `${doc.draftSourceTitles?.[i] ?? "Deleted source"} (${id})`,
               )
               .join(", ")
-          : "No source files recorded (manual instructions, import, or older draft)."}
+          : "No notes recorded (manual instructions, import, or older draft)."}
       </p>
       {doc.draftWiringYaml !== undefined && (
         <p className="text-xs text-muted-foreground">

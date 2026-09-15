@@ -1,58 +1,76 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import type { Doc, Id } from "@convex/_generated/dataModel";
 import type { Campus } from "@/App";
 import {
   Conversation,
   ConversationContent,
-  ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ui/conversation";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-} from "@/components/ui/message";
 import { Response } from "@/components/ui/response";
+import { Reasoning } from "@/components/ui/reasoning";
+import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Composer } from "@/components/Composer";
 import {
-  AudioLines,
-  Loader2,
-  Plus,
-  SendHorizontal,
-  Trash2,
   AlertTriangle,
+  BookOpen,
+  Check,
+  CheckSquare,
+  Copy,
+  ListChecks,
+  Network,
+  Wrench,
 } from "lucide-react";
 
-const SUGGESTIONS = [
-  "The drummer has no click in his ears. What do I check first?",
-  "Walk me through the Sunday setup order.",
-  "What happens if the SoundGrid server drops off the network?",
-  "What is documented for this campus?",
+const SUGGESTIONS: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  prompt: string;
+}[] = [
+  {
+    icon: Wrench,
+    label: "Troubleshoot",
+    prompt: "The drummer has no click in his ears. What do I check first?",
+  },
+  {
+    icon: ListChecks,
+    label: "Sunday setup",
+    prompt: "Walk me through the Sunday setup order.",
+  },
+  {
+    icon: Network,
+    label: "Signal chain",
+    prompt: "What happens if the SoundGrid server drops off the network?",
+  },
+  {
+    icon: BookOpen,
+    label: "What's documented",
+    prompt: "What is documented for this campus?",
+  },
 ];
 
-export function AskView({ campus }: { campus: Campus }) {
-  const conversations = useQuery(api.chat.listConversations, {
-    campusId: campus._id,
-  });
+export function AskView({
+  campus,
+  conversationId,
+  onConversationCreated,
+}: {
+  campus: Campus;
+  conversationId: Id<"conversations"> | null;
+  onConversationCreated: (id: Id<"conversations">) => void;
+}) {
   const docs = useQuery(api.documents.listForCampus, { campusId: campus._id });
-  const hasDocs = docs?.some((d) => d.content.trim()) ?? true;
-  const [activeId, setActiveId] = useState<Id<"conversations"> | null>(null);
+  const documented = docs?.filter((d) => d.content.trim()).length;
   const messages = useQuery(
     api.chat.listMessages,
-    activeId ? { conversationId: activeId } : "skip",
+    conversationId ? { conversationId } : "skip",
   );
   const createConversation = useMutation(api.chat.createConversation);
-  const removeConversation = useMutation(api.chat.removeConversation);
   const send = useMutation(api.chat.send);
   const [input, setInput] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const streaming = messages?.some((m) => m.status === "streaming") ?? false;
   const busy = sending || streaming;
@@ -63,10 +81,10 @@ export function AskView({ campus }: { campus: Campus }) {
     setSending(true);
     setError("");
     try {
-      let id = activeId;
+      let id = conversationId;
       if (!id) {
         id = await createConversation({ campusId: campus._id });
-        setActiveId(id);
+        onConversationCreated(id);
       }
       await send({ conversationId: id, content });
       setInput("");
@@ -74,203 +92,170 @@ export function AskView({ campus }: { campus: Campus }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSending(false);
-      textareaRef.current?.focus();
     }
   }
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    void submit(input);
-  }
-  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void submit(input);
-    }
-  }
+  const composerProps = {
+    value: input,
+    onChange: setInput,
+    onSubmit: () => void submit(input),
+    busy,
+    campus,
+  };
 
-  return (
-    <div className="relative flex h-full">
-      <aside
-        className={cn(
-          "border-border bg-background z-20 w-64 shrink-0 flex-col border-r md:static md:flex",
-          sidebarOpen ? "absolute inset-y-0 left-0 flex shadow-xl" : "hidden",
-        )}
-      >
-        <Button
-          className="md:hidden"
-          variant="ghost"
-          onClick={() => setSidebarOpen(false)}
-        >
-          Close conversations
-        </Button>
-        <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Conversations
-          </span>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            title="New conversation"
-            onClick={() => setActiveId(null)}
-          >
-            <Plus className="size-4" />
-          </Button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          {conversations?.length === 0 && (
-            <p className="text-muted-foreground px-1 py-2 text-xs">
-              No conversations yet for {campus.name}.
-            </p>
-          )}
-          {conversations?.map((c) => (
-            <div
-              key={c._id}
-              className={cn(
-                "group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm",
-                c._id === activeId ? "bg-accent" : "hover:bg-accent/50",
-              )}
-            >
-              <button
-                className="min-w-0 flex-1 truncate text-left"
-                onClick={() => {
-                  setActiveId(c._id);
-                  setSidebarOpen(false);
-                }}
-                title={c.title}
-              >
-                {c.title}
-              </button>
-              <button
-                className="text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
-                title="Delete"
-                onClick={() => {
-                  if (confirm("Delete this conversation?")) {
-                    void removeConversation({ id: c._id })
-                      .then(() => {
-                        if (activeId === c._id) setActiveId(null);
-                      })
-                      .catch((e) =>
-                        setError(e instanceof Error ? e.message : String(e)),
-                      );
-                  }
-                }}
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </aside>
+  const inChat = conversationId !== null && (messages?.length ?? 0) > 0;
 
-      <section className="flex min-w-0 flex-1 flex-col">
-        <Button
-          variant="ghost"
-          className="self-start md:hidden"
-          onClick={() => setSidebarOpen((s) => !s)}
-        >
-          Conversations
-        </Button>
-        {!hasDocs && (
-          <div className="flex items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
-            <AlertTriangle className="size-4 shrink-0" />
-            Nothing is documented for {campus.name} yet. The agent will say so.
-            Add wiring, pitfalls, a runbook and systems under Admin.
-          </div>
-        )}
-        <Conversation className="min-h-0">
-          <ConversationContent className="mx-auto w-full max-w-3xl">
-            {!activeId || messages?.length === 0 ? (
-              <ConversationEmptyState
-                icon={<AudioLines className="size-8" />}
-                title={`Ask about ${campus.name} production`}
-                description="Symptoms, setup order, what plugs into what. Answers cite the documented wiring, pitfalls and runbook."
-              >
-                <div className="flex flex-col items-center gap-3">
-                  <AudioLines className="text-muted-foreground size-8" />
-                  <h3 className="text-base font-medium">
-                    Ask about {campus.name} production
-                  </h3>
-                  <p className="text-muted-foreground max-w-md text-sm">
-                    Symptoms, setup order, what plugs into what. Answers cite
-                    the documented wiring, pitfalls and runbook.
-                  </p>
-                  <div className="mt-2 flex flex-wrap justify-center gap-2">
-                    {SUGGESTIONS.map((s) => (
-                      <Button
-                        key={s}
-                        variant="outline"
-                        size="sm"
-                        className="h-auto whitespace-normal py-1.5 text-left"
-                        onClick={() => void submit(s)}
-                      >
-                        {s}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </ConversationEmptyState>
+  if (!inChat) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center overflow-y-auto px-4 pb-16">
+        <div className="flex w-full max-w-3xl flex-col items-center gap-7">
+          <div className="border-border text-muted-foreground flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
+            {documented === 0 ? (
+              <>
+                <AlertTriangle className="size-3.5 text-amber-500" />
+                Nothing is documented for {campus.name} yet
+              </>
             ) : (
-              messages?.map((m) => (
-                <Message key={m._id} from={m.role}>
-                  <MessageAvatar name={m.role === "user" ? "You" : "V1"} />
-                  <MessageContent
-                    variant={m.role === "assistant" ? "flat" : "contained"}
-                  >
-                    {m.role === "assistant" ? (
-                      m.content ? (
-                        <Response>{m.content}</Response>
-                      ) : (
-                        <span className="text-muted-foreground flex items-center gap-2 text-sm">
-                          <Loader2 className="size-4 animate-spin" /> Thinking
-                        </span>
-                      )
-                    ) : (
-                      <span className="whitespace-pre-wrap">{m.content}</span>
-                    )}
-                  </MessageContent>
-                </Message>
-              ))
+              <>
+                {campus.name}
+                <span className="bg-border h-3 w-px" />
+                {documented === undefined
+                  ? "Loading documentation"
+                  : `${documented} document${documented === 1 ? "" : "s"} approved`}
+              </>
             )}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-
-        <form onSubmit={onSubmit} className="mx-auto w-full max-w-3xl p-4 pt-2">
+          </div>
+          <h1 className="font-serif text-center text-5xl leading-none tracking-tight md:text-6xl">
+            What can I do for you?
+          </h1>
+          <Composer
+            {...composerProps}
+            autoFocus
+            placeholder={`Ask about ${campus.name} production`}
+          />
           {error && (
-            <p role="alert" className="text-destructive mb-2 text-sm">
+            <p role="alert" className="text-destructive text-sm">
               {error}
             </p>
           )}
-          <div className="bg-card focus-within:ring-ring/40 flex items-end gap-2 rounded-xl border p-2 focus-within:ring-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={`Message ProdBot about ${campus.name}…`}
-              rows={1}
-              className="max-h-40 min-h-9 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={busy || !input.trim()}
-              title="Send (Enter)"
-            >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <SendHorizontal className="size-4" />
-              )}
-            </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            {SUGGESTIONS.map((s) => (
+              <Button
+                key={s.label}
+                variant="outline"
+                className="rounded-full px-4"
+                disabled={busy}
+                onClick={() => void submit(s.prompt)}
+              >
+                <s.icon className="size-4" />
+                {s.label}
+              </Button>
+            ))}
           </div>
-          <p className="text-muted-foreground mt-1 text-center text-[11px]">
-            ProdBot only knows what is documented. Double-check before you
-            repatch anything live.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <Conversation className="min-h-0 flex-1">
+        <ConversationContent className="mx-auto w-full max-w-3xl space-y-8 px-4 py-6">
+          {messages?.map((m) =>
+            m.role === "user" ? (
+              <UserMessage key={m._id} message={m} />
+            ) : (
+              <AssistantMessage key={m._id} message={m} />
+            ),
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      <div className="mx-auto w-full max-w-3xl px-4 pb-3">
+        {error && (
+          <p role="alert" className="text-destructive mb-2 text-sm">
+            {error}
           </p>
-        </form>
-      </section>
+        )}
+        <Composer
+          {...composerProps}
+          placeholder="Message ProdBot"
+          status={
+            streaming ? (
+              <>
+                <span className="bg-foreground/70 size-1.5 animate-pulse rounded-full" />
+                <ShimmeringText text="Working on it" startOnView={false} />
+              </>
+            ) : (
+              <>
+                <CheckSquare className="size-3.5" />
+                Answer complete
+              </>
+            )
+          }
+        />
+        <p className="text-muted-foreground mt-2 text-center text-[11px]">
+          ProdBot only knows what is documented. Double-check before you
+          repatch anything live.
+        </p>
+      </div>
     </div>
+  );
+}
+
+function UserMessage({ message }: { message: Doc<"messages"> }) {
+  return (
+    <div className="flex justify-end">
+      <div className="bg-secondary text-secondary-foreground max-w-[85%] rounded-2xl px-4 py-2.5 text-[15px] leading-6 whitespace-pre-wrap">
+        {message.content}
+      </div>
+    </div>
+  );
+}
+
+function AssistantMessage({ message }: { message: Doc<"messages"> }) {
+  const streaming = message.status === "streaming";
+  return (
+    <div className="space-y-3">
+      <Reasoning
+        text={message.reasoning}
+        streaming={streaming && !message.content}
+        seconds={
+          message.finishedAt
+            ? (message.finishedAt - message.createdAt) / 1000
+            : undefined
+        }
+      />
+      {message.content && (
+        <div className="text-[15px] leading-7">
+          <Response>{message.content}</Response>
+        </div>
+      )}
+      {!streaming && message.content && (
+        <CopyButton text={message.content} />
+      )}
+    </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground -ml-1.5"
+      aria-label="Copy answer"
+      title="Copy"
+      onClick={() => {
+        void navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+    >
+      {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+    </Button>
   );
 }

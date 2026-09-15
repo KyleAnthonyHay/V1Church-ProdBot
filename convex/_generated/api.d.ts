@@ -18,6 +18,7 @@ import type * as extract from "../extract.js";
 import type * as fixes from "../fixes.js";
 import type * as lib_prompt from "../lib/prompt.js";
 import type * as sources from "../sources.js";
+import type * as wiringChats from "../wiringChats.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   fixes: typeof fixes;
   "lib/prompt": typeof lib_prompt;
   sources: typeof sources;
+  wiringChats: typeof wiringChats;
 }>;
 
 /**

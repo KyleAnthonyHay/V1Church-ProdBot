@@ -6,7 +6,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { sourceKindValidator } from "./schema";
+import { sourceKindValidator, sourceTopicValidator } from "./schema";
 
 export const list = query({
   args: { campusId: v.optional(v.id("campuses")) },
@@ -43,13 +43,15 @@ export const createPaste = mutation({
     campusId: v.optional(v.id("campuses")),
     title: v.string(),
     text: v.string(),
+    topic: v.optional(sourceTopicValidator),
   },
-  handler: async (ctx, { campusId, title, text }) => {
+  handler: async (ctx, { campusId, title, text, topic }) => {
     if (!text.trim()) throw new Error("Nothing to add");
     return await ctx.db.insert("sources", {
       campusId,
       title: title.trim() || `Pasted note ${new Date().toLocaleDateString()}`,
       kind: "paste",
+      topic,
       text,
       status: "ready",
       createdAt: Date.now(),
@@ -63,12 +65,14 @@ export const createUpload = mutation({
     title: v.string(),
     kind: sourceKindValidator,
     storageId: v.id("_storage"),
+    topic: v.optional(sourceTopicValidator),
   },
-  handler: async (ctx, { campusId, title, kind, storageId }) => {
+  handler: async (ctx, { campusId, title, kind, storageId, topic }) => {
     const id = await ctx.db.insert("sources", {
       campusId,
       title,
       kind,
+      topic,
       storageId,
       status: "pending",
       createdAt: Date.now(),

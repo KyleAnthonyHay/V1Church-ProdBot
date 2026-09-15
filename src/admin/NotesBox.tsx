@@ -6,23 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { FileText, Loader2, Trash2, Upload, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, FileText, Loader2, Trash2, Upload } from "lucide-react";
 
-export function SourcesPanel({
+export type NoteTopic = "wiring" | "pitfalls";
+
+/**
+ * Notes for one admin category: paste text or upload .txt/.pdf, and see what
+ * is on file. The AI drafts the document from these.
+ */
+export function NotesBox({
   campusId,
-  scopeName,
+  topic,
+  placeholder,
 }: {
-  campusId: Id<"campuses"> | undefined;
-  scopeName: string;
+  campusId: Id<"campuses">;
+  topic: NoteTopic;
+  placeholder: string;
 }) {
-  const sources = useQuery(api.sources.list, { campusId });
+  const all = useQuery(api.sources.list, { campusId });
+  // Older notes have no topic; show them under both categories.
+  const sources = all?.filter((s) => !s.topic || s.topic === topic);
   const createPaste = useMutation(api.sources.createPaste);
   const createUpload = useMutation(api.sources.createUpload);
   const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
@@ -31,6 +34,7 @@ export function SourcesPanel({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function addPaste(e: FormEvent) {
@@ -38,7 +42,7 @@ export function SourcesPanel({
     setBusy(true);
     setError(null);
     try {
-      await createPaste({ campusId, title, text });
+      await createPaste({ campusId, title, text, topic });
       setTitle("");
       setText("");
     } catch (err) {
@@ -76,6 +80,7 @@ export function SourcesPanel({
           title: file.name,
           kind: isPdf ? "pdf" : "txt",
           storageId,
+          topic,
         });
       }
     } catch (err) {
@@ -86,91 +91,72 @@ export function SourcesPanel({
     }
   }
 
-  return (
-    <div className="mx-auto grid max-w-6xl gap-4 p-4 md:grid-cols-[1fr_1.2fr]">
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Add source material for {scopeName}
-            </CardTitle>
-            <CardDescription>
-              Describe the room in your own words, paste notes, or upload .txt /
-              .pdf files. Then go to Documents and generate.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <form onSubmit={addPaste} className="space-y-2">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title (e.g. Stage patch as of Sept 2026)"
-              />
-              <Textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={10}
-                placeholder={`Natural language is fine. Example:\n\nDrums are on stage box A on the riser. Kick in is a Beta 91A into A1, kick out Beta 52 into A2... The playback Mac runs Ableton into a Clarett 8Pre; out 3 is click and it only ever goes to the IEM auxes...`}
-                className="font-mono text-xs"
-              />
-              <div className="flex items-center gap-2">
-                <Button type="submit" disabled={busy || !text.trim()}>
-                  {busy ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}{" "}
-                  Add pasted text
-                </Button>
-                <span className="text-muted-foreground text-xs">
-                  {text.length.toLocaleString()} chars
-                </span>
-              </div>
-            </form>
-            <div className="border-border rounded-md border border-dashed p-3">
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
-                multiple
-                className="hidden"
-                onChange={(e) => void addFiles(e.target.files)}
-              />
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={() => fileRef.current?.click()}
-              >
-                <Upload className="size-4" /> Upload .txt or .pdf
-              </Button>
-              <p className="text-muted-foreground mt-2 text-xs">
-                PDF text is extracted on the server. Scanned PDFs with no text
-                layer will fail; paste the text instead.
-              </p>
-            </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
-          </CardContent>
-        </Card>
-      </div>
+  const count = sources?.length ?? 0;
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium">
-          Sources for {scopeName}{" "}
-          <span className="text-muted-foreground">
-            ({sources?.length ?? 0})
-          </span>
-        </h3>
-        {sources?.length === 0 && (
-          <p className="text-muted-foreground text-sm">Nothing added yet.</p>
-        )}
-        {sources?.map((s) => (
-          <SourceRow
-            key={s._id}
-            source={s}
-            onDelete={() => void remove({ id: s._id })}
+  return (
+    <div className="space-y-3">
+      <form onSubmit={addPaste} className="space-y-2">
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title (optional, e.g. Stage patch as of Sept 2026)"
+        />
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={6}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" disabled={busy || !text.trim()}>
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileText className="size-4" />
+            )}
+            Add notes
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => void addFiles(e.target.files)}
           />
-        ))}
-      </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+          >
+            <Upload className="size-4" /> Upload .txt or .pdf
+          </Button>
+        </div>
+      </form>
+      {error && <p className="text-destructive text-sm">{error}</p>}
+
+      <button
+        type="button"
+        className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+        onClick={() => setShowList((s) => !s)}
+      >
+        {count === 0
+          ? "No notes on file yet"
+          : `${showList ? "Hide" : "Show"} notes on file (${count})`}
+      </button>
+      {showList && count > 0 && (
+        <div className="space-y-2">
+          {sources?.map((s) => (
+            <SourceRow
+              key={s._id}
+              source={s}
+              onDelete={() => void remove({ id: s._id })}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -198,7 +184,7 @@ function SourceRow({
     open ? { id: source._id } : "skip",
   );
   return (
-    <div className="bg-card rounded-md border p-3 text-sm">
+    <div className="bg-background rounded-md border p-2.5 text-sm">
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="uppercase">
           {source.kind}
@@ -216,7 +202,8 @@ function SourceRow({
         )}
         {source.status === "ready" && (
           <span className="text-muted-foreground text-xs">
-            {source.charCount.toLocaleString()} chars
+            {source.charCount.toLocaleString()} chars ·{" "}
+            {new Date(source.createdAt).toLocaleDateString()}
           </span>
         )}
         <Button
@@ -239,9 +226,6 @@ function SourceRow({
         >
           <Trash2 className="size-4" />
         </Button>
-      </div>
-      <div className="text-muted-foreground mt-1 text-xs">
-        {new Date(source.createdAt).toLocaleString()}
       </div>
       {source.error && (
         <p className="text-destructive mt-1 text-xs">{source.error}</p>

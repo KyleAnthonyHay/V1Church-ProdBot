@@ -70,6 +70,8 @@ export interface GenerationInput {
   current: string;
   wiringYaml?: string; // for pitfalls / runbook so node ids line up
   instructions?: string;
+  /** Wiring only: produce just the internal wiring of this device. */
+  parentNode?: { id: string; label: string };
 }
 
 export function buildGenerationPrompt(input: GenerationInput): {
@@ -99,7 +101,11 @@ Rules:
       `The campus wiring graph. Any "nodes:" references must use these exact ids:\n\n${input.wiringYaml}`,
     );
   }
-  if (input.current.trim()) {
+  if (input.parentNode) {
+    user.push(
+      `Existing wiring graph (context; do NOT output devices that are outside "${input.parentNode.label}", but reference their ids in edges):\n\n${input.current || "(empty)"}`,
+    );
+  } else if (input.current.trim()) {
     user.push(
       `Current version of the document (update it, keep ids stable):\n\n${input.current}`,
     );
@@ -117,9 +123,13 @@ Rules:
   if (input.instructions?.trim()) {
     user.push(`Admin instructions for this run: ${input.instructions.trim()}`);
   }
-  if (input.kind === "wiring") {
+  if (input.kind === "wiring" && input.parentNode) {
     user.push(
-      "Produce the wiring graph. Every edge must reference node ids that exist in nodes. Prefer one node per physical device; a stage box with 16 inputs is one node with many edges into it. List in `assumptions` everything you inferred or could not determine.",
+      `Produce the COMPLETE internal wiring of the device "${input.parentNode.label}" (id ${input.parentNode.id}): every device that lives inside it and the connections between them. Devices already inside it appear in the existing graph with parent "${input.parentNode.id}"; keep them (same ids) unless the description says to change or remove them, and add what the description adds. Set parent to "${input.parentNode.id}" on every node you output. For the signal that leaves or enters the group, add an edge from the internal device that really carries it to the existing outside device id (for example the laptop -> the stage rack). Never output the parent device itself or any outside device as a node. Use snake_case ids that do not clash with outside devices. List in \`assumptions\` everything you inferred.`,
+    );
+  } else if (input.kind === "wiring") {
+    user.push(
+      "Produce the wiring graph. Every edge must reference node ids that exist in nodes. Prefer one node per physical device; a stage box with 16 inputs is one node with many edges into it. A device may have a `parent` when it sits inside a bigger unit that should stay one node on the main diagram (e.g. a laptop inside the playback rig). List in `assumptions` everything you inferred or could not determine.",
     );
   } else {
     user.push(`Produce the ${meta.title} document in ${meta.format} now.`);
