@@ -1,0 +1,4 @@
+VERIFICATION FIXTURE ONLY. This is a fictional rig, not the actual Brooklyn installation.
+The playback Mac (playback_mac) runs Ableton. Its USB output feeds a Scarlett interface (playback_interface). Output 3 carries click over a TRS cable to input 1 on stage box A (stagebox_a). Stage box A feeds the FOH console (foh_console) over Dante. The FOH console routes click only to the drummer's IEM transmitter (drummer_iem), never to the main speakers.
+P-003: Drummer has no click. Check Ableton's selected output device, interface output 3, stage box input 1, console click channel and drummer's IEM aux send. A known fix is reselecting the Scarlett output device in Ableton. Production lead checks this at 6:30. Done when the drummer hears click and the PA does not.
+All device models, network addresses, firmware versions and other channels are unknown. Do not invent them.

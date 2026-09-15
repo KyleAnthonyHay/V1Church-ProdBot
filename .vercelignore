@@ -1,0 +1,6 @@
+.env*
+.convex
+.verification
+node_modules
+tests
+scripts

@@ -1,0 +1,39 @@
+# VERIFICATION FIXTURE ONLY - not an actual campus rig
+nodes:
+  - id: playback_mac
+    label: Playback Mac
+    type: playback
+    group: playback
+    notes: Verification fixture
+  - id: playback_interface
+    label: Playback interface
+    type: interface
+    group: playback
+  - id: stagebox_a
+    label: Stage box A
+    type: stagebox
+    group: stage_io
+  - id: foh_console
+    label: FOH console
+    type: console
+    group: foh
+  - id: drummer_iem
+    label: Drummer IEM
+    type: iem
+    group: monitors
+edges:
+  - from: playback_mac
+    to: playback_interface
+    signal: usb
+  - from: playback_interface
+    to: stagebox_a
+    signal: analog_line
+    cable: TRS
+    port: "1"
+    channel: click
+  - from: stagebox_a
+    to: foh_console
+    signal: dante
+  - from: foh_console
+    to: drummer_iem
+    signal: analog_line
