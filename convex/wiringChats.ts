@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { assertOwns, scope } from "./lib/access";
 
 /** Oldest turns are dropped past this, so a long chat stays small. */
 const MAX_TURNS = 100;
@@ -15,9 +16,12 @@ const turnValidator = v.object({
 export const list = query({
   args: { campusId: v.optional(v.id("campuses")) },
   handler: async (ctx, { campusId }) => {
+    const { orgId } = await scope(ctx, campusId);
     const rows = await ctx.db
       .query("wiringChats")
-      .withIndex("by_campus_updated", (q) => q.eq("campusId", campusId))
+      .withIndex("by_org_campus_updated", (q) =>
+        q.eq("orgId", orgId).eq("campusId", campusId),
+      )
       .order("desc")
       .take(50);
     return rows.map((c) => ({
@@ -31,16 +35,21 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id("wiringChats") },
-  handler: async (ctx, { id }) => ctx.db.get(id),
+  handler: async (ctx, { id }) => {
+    const chat = await ctx.db.get(id);
+    if (!chat) return null;
+    await assertOwns(ctx, chat, "Chat");
+    return chat;
+  },
 });
 
 export const create = mutation({
   args: { campusId: v.optional(v.id("campuses")) },
   handler: async (ctx, { campusId }) => {
-    if (campusId && !(await ctx.db.get(campusId)))
-      throw new Error("Campus not found");
+    const { orgId } = await scope(ctx, campusId);
     const now = Date.now();
     return ctx.db.insert("wiringChats", {
+      orgId,
       campusId,
       title: NEW_TITLE,
       turns: [],
@@ -55,6 +64,7 @@ export const append = mutation({
   args: { id: v.id("wiringChats"), turns: v.array(turnValidator) },
   handler: async (ctx, { id, turns }) => {
     const chat = await ctx.db.get(id);
+    await assertOwns(ctx, chat, "Chat");
     if (!chat) throw new Error("Chat not found");
     const firstUser = turns.find((t) => t.role === "user")?.text.trim();
     const title =
@@ -74,6 +84,9 @@ export const append = mutation({
 export const remove = mutation({
   args: { id: v.id("wiringChats") },
   handler: async (ctx, { id }) => {
-    if (await ctx.db.get(id)) await ctx.db.delete(id);
+    const chat = await ctx.db.get(id);
+    if (!chat) return;
+    await assertOwns(ctx, chat, "Chat");
+    await ctx.db.delete(id);
   },
 });

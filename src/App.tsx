@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -25,9 +26,15 @@ const VIEW_TITLES: Record<View, string> = {
   admin: "Admin",
 };
 
-export default function App() {
+export type Me = {
+  email: string | null;
+  name: string | null;
+  org: { _id: Id<"organizations">; name: string; demo: boolean };
+};
+
+export default function App({ me }: { me: Me }) {
   const campuses = useQuery(api.campuses.list);
-  const ensureDefaults = useMutation(api.campuses.ensureDefaults);
+  const { signOut } = useAuthActions();
   const config = useQuery(api.admin.config);
   const [view, setView] = usePersistedState<View>("prodbot.view", "ask");
   const [campusPref, setCampusPref] = usePersistedState<string>(
@@ -50,9 +57,6 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
-  useEffect(() => {
-    if (campuses && campuses.length === 0) void ensureDefaults();
-  }, [campuses, ensureDefaults]);
 
   const campus = campuses?.find((c) => c._id === campusPref);
   const conversations = useQuery(
@@ -98,7 +102,14 @@ export default function App() {
     );
   }
   if (!campus) {
-    return <CampusPicker campuses={campuses} onSelect={selectCampus} />;
+    return (
+      <CampusPicker
+        church={me.org.name}
+        campuses={campuses}
+        onSelect={selectCampus}
+        onSignOut={() => void signOut()}
+      />
+    );
   }
 
   return (
@@ -117,6 +128,8 @@ export default function App() {
         onDeleteConversation={deleteConversation}
         onRenameConversation={(id, title) => renameConversation({ id, title })}
         aiConfigured={config?.aiConfigured}
+        me={me}
+        onSignOut={() => void signOut()}
         theme={theme}
         onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         collapsed={collapsed}

@@ -1,10 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { parseRunbookSteps } from "../shared/docs";
+import { scope } from "./lib/access";
 
 export const list = query({
   args: { campusId: v.id("campuses"), date: v.string() },
   handler: async (ctx, { campusId, date }) => {
+    await scope(ctx, campusId);
     return ctx.db
       .query("checklist")
       .withIndex("by_campus_date", (q) =>
@@ -23,6 +25,7 @@ export const set = mutation({
     checked: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await scope(ctx, args.campusId);
     if (
       !/^\d{4}-\d{2}-\d{2}$/.test(args.date) ||
       new Date(args.date).toISOString().slice(0, 10) !== args.date

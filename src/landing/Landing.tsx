@@ -348,8 +348,8 @@ function Hero() {
             Open ProdBot
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </PillLink>
-          <PillLink href="#platform" variant="light">
-            See how it works
+          <PillLink href={`${APP_URL}?demo`} variant="light">
+            Try the demo
           </PillLink>
         </motion.div>
 
@@ -510,14 +510,14 @@ const TOOLS = [
     title: "Ask",
     body: "Volunteers ask in plain language and get answers grounded in that campus's docs.",
     src: "/landing/chat.webp",
-    alt: "A ProdBot answer walking through the Brooklyn Sunday setup order",
+    alt: "A ProdBot answer for a drummer with no click in his ears",
   },
   {
     id: "explore",
     title: "Explore",
     body: "The whole signal chain as a live diagram you can search, focus and export.",
     src: "/landing/explore.webp",
-    alt: "The Brooklyn wiring diagram in ProdBot Explore",
+    alt: "The Downtown wiring diagram in ProdBot Explore",
   },
   {
     id: "admin",
@@ -642,13 +642,13 @@ function Platform() {
 /* Ask                                                                 */
 /* ------------------------------------------------------------------ */
 
-// Condensed from a real answer against the Brooklyn dev documentation.
+// From the demo church's Downtown runbook.
 const CHAT_STEPS = [
-  "Set up the Piano with Ableton",
-  "Connect it to the Stage rack sound over SoundGrid",
-  "Connect the Stage rack to the FOH Demo box",
-  "Connect the FOH Demo box to the LV1 console",
-  "Check the LV1 / SoundGrid status",
+  "Power on the rack, switch, then the SoundGrid server",
+  "Start the LV1 and load the Sunday show file",
+  "Open Ableton and play the click",
+  "Line check drums, bass and keys",
+  "Fresh batteries in every vocal pack",
 ];
 
 function AskSection() {
@@ -688,7 +688,7 @@ function AskSection() {
                 <div className="absolute top-8 left-8 w-[150%] transition-transform duration-700 group-hover:-translate-x-6 group-hover:-translate-y-2">
                   <Shot
                     src="/landing/ask.webp"
-                    alt="ProdBot's Ask screen for the Brooklyn campus"
+                    alt="ProdBot's Ask screen for the Downtown campus"
                   />
                 </div>
               </div>
@@ -791,7 +791,7 @@ function LiveChatCard() {
               className="w-fit max-w-[88%] rounded-2xl rounded-bl-md bg-white/12 px-4 py-3 text-[13px] backdrop-blur-md"
             >
               <div className="mb-2 flex items-center gap-1.5 text-[11px] text-white/60">
-                <Sparkles className="size-3" /> Worked for 5s · Brooklyn
+                <Sparkles className="size-3" /> Worked for 6s · Downtown
               </div>
               <ol className="space-y-1">
                 {CHAT_STEPS.map((s, i) => (
@@ -818,8 +818,8 @@ function LiveChatCard() {
       <div className="relative p-6 pt-4">
         <div className="text-[13px] text-white/60">Grounded answers</div>
         <p className="mt-1 text-sm leading-relaxed text-white/90">
-          The setup order traced device by device along the documented signal
-          chain, condensed from a real Brooklyn answer.
+          The Sunday setup order straight from the campus runbook, with the
+          pitfall to open if a step goes wrong.
         </p>
       </div>
     </div>
@@ -903,7 +903,7 @@ function ZoomShowcase() {
       <motion.div style={{ scale: zoom }} className="relative">
         <Shot
           src="/landing/explore.webp"
-          alt="Brooklyn wiring overview in ProdBot Explore"
+          alt="Downtown wiring overview in ProdBot Explore"
         />
         <motion.div
           style={{ opacity: focusOpacity }}
@@ -922,7 +922,7 @@ function ZoomShowcase() {
             focused ? EXPLORE_COLOR : "bg-muted-foreground/50",
           )}
         />
-        {focused ? "Focused on Stage rack sound" : "Whole campus · 40 devices"}
+        {focused ? "Focused on SoundGrid server" : "Whole campus · 22 devices"}
       </div>
     </div>
   );
@@ -1003,8 +1003,8 @@ function AdminSection() {
             <div className="bg-muted/80 group relative h-full min-h-[360px] overflow-hidden rounded-[22px]">
               <div className="absolute top-8 left-8 w-[135%] transition-transform duration-700 group-hover:-translate-x-8">
                 <Shot
-                  src="/landing/admin.webp"
-                  alt="ProdBot Admin: add or update the Brooklyn wiring diagram"
+                  src="/landing/admin-pitfalls.webp"
+                  alt="ProdBot Admin: a pitfalls draft awaiting review"
                 />
               </div>
             </div>

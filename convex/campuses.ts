@@ -1,33 +1,14 @@
-import { mutation, query } from "./_generated/server";
+import { query } from "./_generated/server";
+import { viewer } from "./lib/access";
 
-const DEFAULTS: [string, string][] = [
-  ["brooklyn", "Brooklyn"],
-  ["long-island", "Long Island"],
-  ["manhattan", "Manhattan"],
-  ["miami", "Miami"],
-  ["indiana", "Indiana"],
-];
-
+/** The signed-in church's campuses, in order. */
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("campuses").collect();
-    return all.sort((a, b) => a.order - b.order);
-  },
-});
-
-/** Idempotent. The client calls this on load so the five campuses exist. */
-export const ensureDefaults = mutation({
-  args: {},
-  handler: async (ctx) => {
-    let i = 0;
-    for (const [slug, name] of DEFAULTS) {
-      const existing = await ctx.db
-        .query("campuses")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .unique();
-      if (!existing) await ctx.db.insert("campuses", { slug, name, order: i });
-      i++;
-    }
+    const { orgId } = await viewer(ctx);
+    return ctx.db
+      .query("campuses")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect();
   },
 });

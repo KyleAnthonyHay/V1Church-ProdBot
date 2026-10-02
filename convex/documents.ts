@@ -10,28 +10,42 @@ import { validateImport } from "../shared/backup";
 import { docKindValidator } from "./schema";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { assertOwns, scope } from "./lib/access";
 
 async function findDoc(
   ctx: QueryCtx | MutationCtx,
+  orgId: Id<"organizations">,
   campusId: Id<"campuses"> | undefined,
   kind: string,
 ) {
   return await ctx.db
     .query("documents")
-    .withIndex("by_campus_kind", (q) =>
-      q.eq("campusId", campusId).eq("kind", kind as never),
+    .withIndex("by_org_campus_kind", (q) =>
+      q
+        .eq("orgId", orgId)
+        .eq("campusId", campusId)
+        .eq("kind", kind as never),
     )
     .unique();
+}
+
+/** A document the signed-in church owns. */
+async function ownedDoc(ctx: QueryCtx | MutationCtx, id: Id<"documents">) {
+  const doc = await ctx.db.get(id);
+  await assertOwns(ctx, doc, "Document");
+  return doc!;
 }
 
 export const listForCampus = query({
   args: { campusId: v.optional(v.id("campuses")) },
   handler: async (ctx, { campusId }) => {
-    const rows = await ctx.db
+    const { orgId } = await scope(ctx, campusId);
+    return await ctx.db
       .query("documents")
-      .withIndex("by_campus_kind", (q) => q.eq("campusId", campusId))
+      .withIndex("by_org_campus_kind", (q) =>
+        q.eq("orgId", orgId).eq("campusId", campusId),
+      )
       .collect();
-    return rows;
   },
 });
 
@@ -43,15 +57,17 @@ export const save = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, { campusId, kind, content, note }) => {
+    const { orgId } = await scope(ctx, campusId);
     if (kind === "wiring" && content.trim()) {
       const parsed = parseWiringYaml(content);
       if (!parsed.graph || parsed.issues.length)
         throw new Error(`Invalid wiring: ${parsed.issues.join("; ")}`);
     }
-    const existing = await findDoc(ctx, campusId, kind);
+    const existing = await findDoc(ctx, orgId, campusId, kind);
     const now = Date.now();
     if (!existing) {
       return await ctx.db.insert("documents", {
+        orgId,
         campusId,
         kind,
         content,
@@ -76,8 +92,8 @@ export const save = mutation({
 export const approveDraft = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, { id }) => {
-    const doc = await ctx.db.get(id);
-    if (!doc || doc.draft === undefined) throw new Error("No draft to approve");
+    const doc = await ownedDoc(ctx, id);
+    if (doc.draft === undefined) throw new Error("No draft to approve");
     if (doc.generating) throw new Error("Wait for generation to finish");
     if (
       doc.draftBaseContent !== undefined &&
@@ -92,7 +108,7 @@ export const approveDraft = mutation({
         throw new Error(`Invalid wiring: ${parsed.issues.join("; ")}`);
     }
     if (doc.draftWiringYaml !== undefined) {
-      const wiring = await findDoc(ctx, doc.campusId, "wiring");
+      const wiring = await findDoc(ctx, doc.orgId!, doc.campusId, "wiring");
       if ((wiring?.content ?? "") !== doc.draftWiringYaml)
         throw new Error(
           "Approve the wiring used by this draft first, or regenerate against the current wiring.",
@@ -124,7 +140,7 @@ export const approveDraft = mutation({
 export const discardDraft = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, { id }) => {
-    if ((await ctx.db.get(id))?.generating)
+    if ((await ownedDoc(ctx, id)).generating)
       throw new Error("Wait for generation to finish");
     await ctx.db.patch(id, {
       draft: undefined,
@@ -142,6 +158,7 @@ export const discardDraft = mutation({
 export const revisions = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, { documentId }) => {
+    await ownedDoc(ctx, documentId);
     return ctx.db
       .query("revisions")
       .withIndex("by_document", (q) => q.eq("documentId", documentId))
@@ -155,8 +172,7 @@ export const restoreRevision = mutation({
   handler: async (ctx, { revisionId }) => {
     const rev = await ctx.db.get(revisionId);
     if (!rev) throw new Error("Revision not found");
-    const doc = await ctx.db.get(rev.documentId);
-    if (!doc) throw new Error("Document not found");
+    const doc = await ownedDoc(ctx, rev.documentId);
     const now = Date.now();
     await ctx.db.insert("revisions", {
       documentId: doc._id,
@@ -172,19 +188,21 @@ export const restoreRevision = mutation({
 
 export const setGenerating = internalMutation({
   args: {
+    orgId: v.id("organizations"),
     campusId: v.optional(v.id("campuses")),
     kind: docKindValidator,
     generating: v.boolean(),
     error: v.optional(v.string()),
   },
-  handler: async (ctx, { campusId, kind, generating, error }) => {
-    const existing = await findDoc(ctx, campusId, kind);
+  handler: async (ctx, { orgId, campusId, kind, generating, error }) => {
+    const existing = await findDoc(ctx, orgId, campusId, kind);
     if (generating && existing?.generating)
       throw new Error("This document is already generating");
     if (existing) {
       await ctx.db.patch(existing._id, { generating, generateError: error });
     } else {
       await ctx.db.insert("documents", {
+        orgId,
         campusId,
         kind,
         content: "",
@@ -198,6 +216,7 @@ export const setGenerating = internalMutation({
 
 export const setDraft = internalMutation({
   args: {
+    orgId: v.id("organizations"),
     campusId: v.optional(v.id("campuses")),
     kind: docKindValidator,
     draft: v.string(),
@@ -210,6 +229,7 @@ export const setDraft = internalMutation({
   handler: async (
     ctx,
     {
+      orgId,
       campusId,
       kind,
       draft,
@@ -220,7 +240,7 @@ export const setDraft = internalMutation({
       draftBaseContent,
     },
   ) => {
-    const existing = await findDoc(ctx, campusId, kind);
+    const existing = await findDoc(ctx, orgId, campusId, kind);
     const patch = {
       draft,
       draftNotes,
@@ -235,6 +255,7 @@ export const setDraft = internalMutation({
     if (existing) await ctx.db.patch(existing._id, patch);
     else
       await ctx.db.insert("documents", {
+        orgId,
         campusId,
         kind,
         content: "",
@@ -246,14 +267,17 @@ export const setDraft = internalMutation({
 
 export const contextForGeneration = internalQuery({
   args: {
+    orgId: v.id("organizations"),
     campusId: v.optional(v.id("campuses")),
     kind: docKindValidator,
     useDraftWiring: v.optional(v.boolean()),
   },
-  handler: async (ctx, { campusId, kind, useDraftWiring }) => {
+  handler: async (ctx, { orgId, campusId, kind, useDraftWiring }) => {
     const campus = campusId ? await ctx.db.get(campusId) : null;
-    const doc = await findDoc(ctx, campusId, kind);
-    const wiring = campusId ? await findDoc(ctx, campusId, "wiring") : null;
+    const doc = await findDoc(ctx, orgId, campusId, kind);
+    const wiring = campusId
+      ? await findDoc(ctx, orgId, campusId, "wiring")
+      : null;
     return {
       campusName: campus?.name ?? null,
       current: doc?.content ?? "",
@@ -276,10 +300,14 @@ export const contextForConversation = internalQuery({
       .query("documents")
       .withIndex("by_campus_kind", (q) => q.eq("campusId", convo.campusId))
       .collect();
-    const sharedDocs = await ctx.db
-      .query("documents")
-      .withIndex("by_campus_kind", (q) => q.eq("campusId", undefined))
-      .collect();
+    const sharedDocs = campus.orgId
+      ? await ctx.db
+          .query("documents")
+          .withIndex("by_org_campus_kind", (q) =>
+            q.eq("orgId", campus.orgId).eq("campusId", undefined),
+          )
+          .collect()
+      : [];
     const pick = (d: { kind: string; content: string }) => ({
       kind: d.kind,
       content: d.content,
@@ -299,11 +327,10 @@ export const importFiles = mutation({
   },
   handler: async (ctx, { campusId, files }) => {
     validateImport(files, campusId === undefined);
-    if (campusId && !(await ctx.db.get(campusId)))
-      throw new Error("Campus not found");
+    const { orgId } = await scope(ctx, campusId);
     // One transaction: all files become reviewable drafts, none are published.
     for (const file of files) {
-      const existing = await findDoc(ctx, campusId, file.kind);
+      const existing = await findDoc(ctx, orgId, campusId, file.kind);
       if (existing?.generating || existing?.draft !== undefined)
         throw new Error(
           `Review or discard the existing ${file.kind} draft first`,
@@ -319,6 +346,7 @@ export const importFiles = mutation({
       if (existing) await ctx.db.patch(existing._id, patch);
       else
         await ctx.db.insert("documents", {
+          orgId,
           campusId,
           kind: file.kind,
           content: "",
@@ -350,6 +378,7 @@ async function deleteDoc(ctx: MutationCtx, id: Id<"documents">) {
 export const remove = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, { id }) => {
+    await ownedDoc(ctx, id);
     await deleteDoc(ctx, id);
   },
 });
@@ -357,7 +386,7 @@ export const remove = mutation({
 export const clearCampus = mutation({
   args: { campusId: v.id("campuses"), confirmation: v.string() },
   handler: async (ctx, { campusId, confirmation }) => {
-    const campus = await ctx.db.get(campusId);
+    const { campus } = await scope(ctx, campusId);
     if (!campus || confirmation !== campus.name)
       throw new Error("Enter the campus name to confirm");
     const docs = await ctx.db

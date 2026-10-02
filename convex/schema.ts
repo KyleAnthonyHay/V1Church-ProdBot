@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export const docKindValidator = v.union(
@@ -24,14 +25,37 @@ export const sourceTopicValidator = v.union(
 );
 
 export default defineSchema({
+  ...authTables,
+
+  // A church. Everything below belongs to one. orgId is optional only so
+  // rows from before sign-in existed can be migrated (orgs:claimLegacy).
+  organizations: defineTable({
+    name: v.string(),
+    /** The public demo church, reset nightly. */
+    demo: v.optional(v.boolean()),
+    createdAt: v.number(),
+  }),
+
+  memberships: defineTable({
+    userId: v.id("users"),
+    orgId: v.id("organizations"),
+    role: v.union(v.literal("owner"), v.literal("member")),
+  })
+    .index("by_user", ["userId"])
+    .index("by_org", ["orgId"]),
+
   campuses: defineTable({
+    orgId: v.optional(v.id("organizations")),
     slug: v.string(),
     name: v.string(),
     order: v.number(),
-  }).index("by_slug", ["slug"]),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_org", ["orgId", "order"]),
 
   // Raw material admins add: pasted text, .txt, .pdf. campusId undefined = shared.
   sources: defineTable({
+    orgId: v.optional(v.id("organizations")),
     campusId: v.optional(v.id("campuses")),
     title: v.string(),
     kind: sourceKindValidator,
@@ -45,10 +69,13 @@ export default defineSchema({
     ),
     error: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_campus", ["campusId"]),
+  })
+    .index("by_campus", ["campusId"])
+    .index("by_org_campus", ["orgId", "campusId"]),
 
   // Structured docs the agent reads. One row per (campus, kind). campusId undefined = shared.
   documents: defineTable({
+    orgId: v.optional(v.id("organizations")),
     campusId: v.optional(v.id("campuses")),
     kind: docKindValidator,
     content: v.string(),
@@ -62,7 +89,9 @@ export default defineSchema({
     generating: v.optional(v.boolean()),
     generateError: v.optional(v.string()),
     updatedAt: v.number(),
-  }).index("by_campus_kind", ["campusId", "kind"]),
+  })
+    .index("by_campus_kind", ["campusId", "kind"])
+    .index("by_org_campus_kind", ["orgId", "campusId", "kind"]),
 
   revisions: defineTable({
     documentId: v.id("documents"),
@@ -80,6 +109,7 @@ export default defineSchema({
   // Describe-and-draw chats in the wiring workspace. Several per campus; the
   // canvas holds the drawing, so these only keep the conversation. Bounded.
   wiringChats: defineTable({
+    orgId: v.optional(v.id("organizations")),
     campusId: v.optional(v.id("campuses")),
     title: v.string(),
     turns: v.array(
@@ -91,7 +121,9 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_campus_updated", ["campusId", "updatedAt"]),
+  })
+    .index("by_campus_updated", ["campusId", "updatedAt"])
+    .index("by_org_campus_updated", ["orgId", "campusId", "updatedAt"]),
 
   checklist: defineTable({
     campusId: v.id("campuses"),

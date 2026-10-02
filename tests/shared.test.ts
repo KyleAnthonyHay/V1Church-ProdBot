@@ -29,6 +29,7 @@ import {
   pitfallsToMarkdown,
   nextPitfallId,
 } from "../shared/docs";
+import { DEMO_CAMPUSES } from "../convex/demoData";
 import { documentFromFile, validateImport } from "../shared/backup";
 import { budgetHistory } from "../shared/history";
 
@@ -217,8 +218,20 @@ describe("nested wiring views", () => {
       { id: "stage", label: "Stage", type: "subsystem", group: "stage_io" },
       { id: "foh", label: "FOH", type: "subsystem", group: "foh" },
       { id: "lv1", label: "LV1", type: "console", group: "foh", parent: "foh" },
-      { id: "rack", label: "Rack", type: "server", group: "foh", parent: "foh" },
-      { id: "box_a", label: "Box A", type: "stagebox", group: "stage_io", parent: "stage" },
+      {
+        id: "rack",
+        label: "Rack",
+        type: "server",
+        group: "foh",
+        parent: "foh",
+      },
+      {
+        id: "box_a",
+        label: "Box A",
+        type: "stagebox",
+        group: "stage_io",
+        parent: "stage",
+      },
       { id: "pa", label: "PA", type: "speaker", group: "pa" },
     ],
     edges: [
@@ -230,40 +243,66 @@ describe("nested wiring views", () => {
   test("main view collapses nested devices onto their parents", () => {
     const v = viewGraph(structuredClone(graph) as never, null);
     expect(v.nodes.map((n) => n.id).sort()).toEqual(["foh", "pa", "stage"]);
-    expect(v.edges.map((e) => `${e.from}>${e.to}`)).toEqual(["stage>foh", "foh>pa"]);
+    expect(v.edges.map((e) => `${e.from}>${e.to}`)).toEqual([
+      "stage>foh",
+      "foh>pa",
+    ]);
     expect(v.childCount.get("foh")).toBe(2);
     expect(v.external.size).toBe(0);
   });
   test("focused view shows children and external placeholders", () => {
     const v = viewGraph(structuredClone(graph) as never, "foh");
-    expect(v.nodes.map((n) => n.id).sort()).toEqual(["lv1", "pa", "rack", "stage"]);
+    expect(v.nodes.map((n) => n.id).sort()).toEqual([
+      "lv1",
+      "pa",
+      "rack",
+      "stage",
+    ]);
     expect([...v.external].sort()).toEqual(["pa", "stage"]);
     expect(v.edges.map((e) => `${e.from}>${e.to}:${e.index}`)).toEqual([
       "stage>rack:0",
       "rack>lv1:1",
       "lv1>pa:2",
     ]);
-    expect(ancestorsOf(structuredClone(graph) as never, "lv1").map((n) => n.id)).toEqual(["foh"]);
+    expect(
+      ancestorsOf(structuredClone(graph) as never, "lv1").map((n) => n.id),
+    ).toEqual(["foh"]);
   });
   test("a connection on the group itself is a dangling port inside, not a card", () => {
     const g = structuredClone(graph) as never as {
-      nodes: { id: string; label: string; type: string; group: string; parent?: string }[];
+      nodes: {
+        id: string;
+        label: string;
+        type: string;
+        group: string;
+        parent?: string;
+      }[];
       edges: { from: string; to: string; signal: string }[];
     };
     g.edges.push({ from: "foh", to: "pa", signal: "aes" });
     const v = viewGraph(g as never, "foh");
     expect(v.nodes.some((n) => n.id === "foh")).toBe(false);
     expect(
-      v.dangling.map((e) => `${e.from}>${e.to}:${e.index}:${e.outgoing}:${e.otherLabel}`),
+      v.dangling.map(
+        (e) => `${e.from}>${e.to}:${e.index}:${e.outgoing}:${e.otherLabel}`,
+      ),
     ).toEqual(["foh>pa:3:true:PA"]);
     expect(v.edges.some((e) => e.from === "foh")).toBe(false);
     const main = viewGraph(g as never, null);
     expect(main.dangling).toEqual([]);
-    expect(main.edges.filter((e) => e.from === "foh" && e.to === "pa").length).toBe(2);
+    expect(
+      main.edges.filter((e) => e.from === "foh" && e.to === "pa").length,
+    ).toBe(2);
   });
   test("a device wired to its group's own input/output is a port edge inside", () => {
     const g = structuredClone(graph) as never as {
-      nodes: { id: string; label: string; type: string; group: string; parent?: string }[];
+      nodes: {
+        id: string;
+        label: string;
+        type: string;
+        group: string;
+        parent?: string;
+      }[];
       edges: { from: string; to: string; signal: string }[];
     };
     g.edges.push({ from: "lv1", to: "foh", signal: "aes" });
@@ -284,7 +323,15 @@ describe("nested wiring views", () => {
     expect(cableLabel({ cable: "XLR" })).toBe("XLR");
     const parsed = wiringGraphSchema.safeParse({
       nodes: [],
-      edges: [{ from: "a", to: "b", signal: "analog_line", cable: "XLR", format: "mono" }],
+      edges: [
+        {
+          from: "a",
+          to: "b",
+          signal: "analog_line",
+          cable: "XLR",
+          format: "mono",
+        },
+      ],
     });
     expect(parsed.success).toBe(true);
   });
@@ -314,9 +361,20 @@ describe("mergeInternalWiring", () => {
       "piano",
       {
         nodes: [
-          { id: "midi_kb", label: "MIDI keyboard", type: "source", group: "keys" },
+          {
+            id: "midi_kb",
+            label: "MIDI keyboard",
+            type: "source",
+            group: "keys",
+          },
           { id: "rack", label: "Adapter", type: "interface", group: "keys" },
-          { id: "laptop", label: "Laptop", type: "computer", group: "keys", parent: "piano" },
+          {
+            id: "laptop",
+            label: "Laptop",
+            type: "computer",
+            group: "keys",
+            parent: "piano",
+          },
         ],
         edges: [
           { from: "midi_kb", to: "rack", signal: "usb", cable: "USB Type B" },
@@ -350,7 +408,13 @@ test("mergeInternalWiring with replace swaps the old internals", () => {
   const current = {
     nodes: [
       { id: "piano", label: "Piano", type: "playback", group: "keys" },
-      { id: "old_kb", label: "Old", type: "source", group: "keys", parent: "piano" },
+      {
+        id: "old_kb",
+        label: "Old",
+        type: "source",
+        group: "keys",
+        parent: "piano",
+      },
       { id: "rack", label: "Rack", type: "stagebox", group: "stage_io" },
     ],
     edges: [{ from: "old_kb", to: "rack", signal: "soundgrid" }],
@@ -359,21 +423,25 @@ test("mergeInternalWiring with replace swaps the old internals", () => {
     current,
     "piano",
     {
-      nodes: [{ id: "laptop", label: "Laptop", type: "computer", group: "keys" }],
+      nodes: [
+        { id: "laptop", label: "Laptop", type: "computer", group: "keys" },
+      ],
       edges: [{ from: "laptop", to: "rack", signal: "soundgrid" }],
     } as never,
     { replace: true },
   );
   expect(graph.nodes.map((n) => n.id)).toEqual(["piano", "rack", "laptop"]);
-  expect(graph.edges).toEqual([{ from: "laptop", to: "rack", signal: "soundgrid" }]);
+  expect(graph.edges).toEqual([
+    { from: "laptop", to: "rack", signal: "soundgrid" },
+  ]);
 });
 
 describe("toCsv", () => {
   test("quotes cells with commas, quotes and line breaks", async () => {
     const { toCsv } = await import("../shared/csv");
-    expect(
-      toCsv(["A", "B"], [["plain", 'say "hi", then\nleave']]),
-    ).toBe('A,B\r\nplain,"say ""hi"", then\nleave"');
+    expect(toCsv(["A", "B"], [["plain", 'say "hi", then\nleave']])).toBe(
+      'A,B\r\nplain,"say ""hi"", then\nleave"',
+    );
   });
 });
 
@@ -392,9 +460,16 @@ describe("wiring layout", () => {
   const overlaps = (a: Rect, b: Rect) =>
     a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const inside = (a: Rect, b: Rect) =>
-    a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
+    a.x >= b.x &&
+    a.y >= b.y &&
+    a.x + a.w <= b.x + b.w &&
+    a.y + a.h <= b.y + b.h;
   const cards = (l: WiringLayout): Rect[] =>
-    [...l.nodes.values()].map((p) => ({ ...p, w: metrics.nodeW, h: metrics.nodeH }));
+    [...l.nodes.values()].map((p) => ({
+      ...p,
+      w: metrics.nodeW,
+      h: metrics.nodeH,
+    }));
   const assertClean = (l: WiringLayout, view: WiringView) => {
     const cs = cards(l);
     for (let i = 0; i < cs.length; i++)
@@ -404,7 +479,11 @@ describe("wiring layout", () => {
       for (let j = i + 1; j < l.boxes.length; j++)
         expect(overlaps(l.boxes[i], l.boxes[j])).toBe(false);
     for (const n of view.nodes) {
-      const card = { ...l.nodes.get(n.id)!, w: metrics.nodeW, h: metrics.nodeH };
+      const card = {
+        ...l.nodes.get(n.id)!,
+        w: metrics.nodeW,
+        h: metrics.nodeH,
+      };
       const own = l.boxes.find((b) => b.group === n.group);
       for (const b of l.boxes) {
         if (!view.external.has(n.id) && b === own) {
@@ -437,14 +516,18 @@ describe("wiring layout", () => {
     expect(keys.h).toBeGreaterThan(15 * metrics.nodeH);
     // The stage rack sits level with the middle of the stack it collects.
     const rack = l.nodes.get("rack")!;
-    expect(Math.abs(rack.y + metrics.nodeH / 2 - (keys.y + keys.h / 2))).toBeLessThan(
-      metrics.nodeH,
-    );
+    expect(
+      Math.abs(rack.y + metrics.nodeH / 2 - (keys.y + keys.h / 2)),
+    ).toBeLessThan(metrics.nodeH);
   });
 
   test("a group that grows pushes the groups after it out of the way", () => {
     const build = (bassCount: number) => {
-      const nodes = [device("drum_1", "drums"), device("vox_1", "vocals"), device("rack", "stage_io")];
+      const nodes = [
+        device("drum_1", "drums"),
+        device("vox_1", "vocals"),
+        device("rack", "stage_io"),
+      ];
       const edges = [
         { from: "drum_1", to: "rack", signal: "analog_mic" },
         { from: "vox_1", to: "rack", signal: "analog_mic" },
@@ -460,18 +543,23 @@ describe("wiring layout", () => {
     const big = build(10);
     assertClean(small.layout, small.view);
     assertClean(big.layout, big.view);
-    const box = (l: WiringLayout, g: string) => l.boxes.find((b) => b.group === g)!;
+    const box = (l: WiringLayout, g: string) =>
+      l.boxes.find((b) => b.group === g)!;
     // Drums, bass, vocals read top to bottom in both.
-    expect(box(small.layout, "drums").y).toBeLessThan(box(small.layout, "bass").y);
-    expect(box(small.layout, "bass").y).toBeLessThan(box(small.layout, "vocals").y);
+    expect(box(small.layout, "drums").y).toBeLessThan(
+      box(small.layout, "bass").y,
+    );
+    expect(box(small.layout, "bass").y).toBeLessThan(
+      box(small.layout, "vocals").y,
+    );
     expect(box(big.layout, "drums").y).toBeLessThan(box(big.layout, "bass").y);
     expect(box(big.layout, "bass").y).toBeLessThan(box(big.layout, "vocals").y);
     // Vocals moved down by exactly the growth of bass.
     const growth = box(big.layout, "bass").h - box(small.layout, "bass").h;
     expect(growth).toBeGreaterThan(0);
-    expect(
-      box(big.layout, "vocals").y - box(big.layout, "drums").y,
-    ).toBe(box(small.layout, "vocals").y - box(small.layout, "drums").y + growth);
+    expect(box(big.layout, "vocals").y - box(big.layout, "drums").y).toBe(
+      box(small.layout, "vocals").y - box(small.layout, "drums").y + growth,
+    );
   });
 
   test("groups spanning the same columns stack instead of overlapping", () => {
@@ -527,7 +615,12 @@ describe("groupDeviceOptions", () => {
   test("buckets by layer in group order and searches name, id and model", async () => {
     const { groupDeviceOptions } = await import("../shared/wiring");
     const nodes = [
-      { id: "lv1", label: "LV1 console", group: "foh" as const, model: "Waves eMotion" },
+      {
+        id: "lv1",
+        label: "LV1 console",
+        group: "foh" as const,
+        model: "Waves eMotion",
+      },
       { id: "piano", label: "Piano", group: "keys" as const },
       { id: "nord", label: "Stage keys", group: "keys" as const },
     ];
@@ -537,7 +630,29 @@ describe("groupDeviceOptions", () => {
       ["Keys", ["piano", "nord"]],
       ["FOH", ["lv1"]],
     ]);
-    expect(groupDeviceOptions(nodes, "waves").map((g) => g.group)).toEqual(["foh"]);
+    expect(groupDeviceOptions(nodes, "waves").map((g) => g.group)).toEqual([
+      "foh",
+    ]);
     expect(groupDeviceOptions(nodes, "nothing")).toEqual([]);
   });
+});
+
+test("demo church documents are valid and cross-reference", () => {
+  for (const campus of DEMO_CAMPUSES) {
+    const wiring = campus.docs.find((d) => d.kind === "wiring")!;
+    const parsed = parseWiringYaml(wiring.content);
+    expect(parsed.issues).toEqual([]);
+    const ids = new Set(parsed.graph!.nodes.map((n) => n.id));
+    const pitfalls = parsePitfalls(
+      campus.docs.find((d) => d.kind === "pitfalls")!.content,
+    );
+    expect(pitfalls.length).toBeGreaterThan(0);
+    expect(validatePitfallRefs(pitfalls, ids)).toEqual([]);
+    const runbook = parseRunbookSteps(
+      campus.docs.find((d) => d.kind === "runbook")!.content,
+    );
+    const known = new Set(pitfalls.map((p) => p.id));
+    for (const step of runbook)
+      for (const id of step.pitfalls) expect(known.has(id)).toBe(true);
+  }
 });

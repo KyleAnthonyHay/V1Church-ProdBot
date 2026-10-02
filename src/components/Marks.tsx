@@ -36,6 +36,8 @@ const CAMPUS_CODES: Record<string, string> = {
   "long island": "LI",
   miami: "MI",
   indiana: "IN",
+  downtown: "DT",
+  eastside: "ES",
 };
 
 /** Two-letter code for a campus ("Long Island" -> "LI"). */

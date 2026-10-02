@@ -9,16 +9,17 @@ import { internal } from "./_generated/api";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { budgetHistory } from "../shared/history";
+import { conversationFor, scope } from "./lib/access";
 
+/** A conversation the signed-in church owns. */
 export async function getConversation(ctx: QueryCtx, id: Id<"conversations">) {
-  const conversation = await ctx.db.get(id);
-  if (!conversation) throw new Error("Conversation not found");
-  return conversation;
+  return conversationFor(ctx, id);
 }
 
 export const listConversations = query({
   args: { campusId: v.id("campuses") },
   handler: async (ctx, { campusId }) => {
+    await scope(ctx, campusId);
     return ctx.db
       .query("conversations")
       .withIndex("by_campus", (q) => q.eq("campusId", campusId))
@@ -30,7 +31,7 @@ export const listConversations = query({
 export const createConversation = mutation({
   args: { campusId: v.id("campuses") },
   handler: async (ctx, { campusId }) => {
-    if (!(await ctx.db.get(campusId))) throw new Error("Campus not found");
+    await scope(ctx, campusId);
     return ctx.db.insert("conversations", {
       campusId,
       title: "New conversation",
@@ -67,6 +68,7 @@ export const listMessages = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
     if (!(await ctx.db.get(conversationId))) return [];
+    await getConversation(ctx, conversationId);
     return ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>

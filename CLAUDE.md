@@ -11,7 +11,9 @@ Read README.md for setup and VERIFICATION.md for evidence and remaining limitati
 ## Conventions
 - `shared/` holds pure logic used by server and client. No React or Convex imports.
 - `"use node"` Convex files export actions only.
-- No user auth or admin password gate; Admin is a view switch. Do not reintroduce auth unless requested.
+- Email/password sign-in via Convex Auth. Each church is an `organizations` row; users join through `memberships`. Every public Convex function checks access with `convex/lib/access.ts` (`viewer`, `scope`, `assertOwns`). Admin is still a view switch inside a church.
+- Shared docs (links, glossary) are rows with `campusId` undefined, scoped by `orgId`.
+- The public demo church (`demo@prodbot.app` / `prodbot-demo`) is fictional, labelled "(Demo)", and reset nightly by `demo:seed`. Real churches never see it.
 - OpenAI secrets live in Convex deployment environment variables, never the frontend.
 - Model defaults to `gpt-5.6-luna`. Chat and generation reasoning are independently configurable.
 - One document per `(campusId, kind)`; undefined campus means shared.
@@ -21,4 +23,4 @@ Read README.md for setup and VERIFICATION.md for evidence and remaining limitati
 - Chat writes streaming message snapshots to Convex; histories are bounded.
 - Reported fixes require a verbatim volunteer quote and review before document changes.
 - Heavy views, diagrams, markdown and exports are loaded on demand.
-- Never present fictional fixtures as real campus documentation. Smoke scripts are development-only.
+- Never present fictional fixtures as real campus documentation; the demo church is the only fictional content and stays in its own org. Smoke scripts are development-only.

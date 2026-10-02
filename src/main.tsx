@@ -1,8 +1,9 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import "./index.css";
-import App from "./App";
+import { AuthGate } from "./AuthGate";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const Landing = lazy(() => import("./landing/Landing"));
@@ -19,9 +20,9 @@ function appRoot() {
   const convex = new ConvexReactClient(url);
   return (
     <ErrorBoundary>
-      <ConvexProvider client={convex}>
-        <App />
-      </ConvexProvider>
+      <ConvexAuthProvider client={convex}>
+        <AuthGate />
+      </ConvexAuthProvider>
     </ErrorBoundary>
   );
 }

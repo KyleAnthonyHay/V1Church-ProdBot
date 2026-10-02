@@ -110,7 +110,10 @@ export const answer = internalAction({
         model: MODEL,
         max_output_tokens: 8000,
         store: false,
-        reasoning: { effort: effort("AGENT_EFFORT", "medium"), summary: "auto" },
+        reasoning: {
+          effort: effort("AGENT_EFFORT", "medium"),
+          summary: "auto",
+        },
         instructions: system,
         input: history.map((m) => ({ role: m.role, content: m.content })),
         tools: [
@@ -197,7 +200,11 @@ export const draftWiring = action({
     /** The canvas as it is now (may include unsaved work). */
     currentYaml: v.string(),
   },
-  handler: async (ctx, { campusId, parentNodeId, description, currentYaml }) => {
+  handler: async (
+    ctx,
+    { campusId, parentNodeId, description, currentYaml },
+  ) => {
+    await ctx.runQuery(internal.orgs.scopeFor, { campusId });
     const text = description.trim();
     if (!text) throw new Error("Describe the wiring first.");
     if (text.length > 20_000) throw new Error("Description is too long.");
@@ -211,9 +218,9 @@ export const draftWiring = action({
     if (parentNodeId && !parent)
       throw new Error("That device is not on the canvas.");
     const campus = campusId
-      ? await ctx.runQuery(api.campuses.list).then((all) =>
-          all.find((c) => c._id === campusId),
-        )
+      ? await ctx
+          .runQuery(api.campuses.list)
+          .then((all) => all.find((c) => c._id === campusId))
       : undefined;
     const title = parent ? `Inside ${parent.label}` : "Diagram chat";
     // Keep the description on file with the other wiring notes, so pitfall
@@ -244,7 +251,9 @@ export const draftWiring = action({
     requireCompleted(response);
     logUsage(response, parent ? "draft_internal_wiring" : "draft_wiring");
     if (!response.output_parsed)
-      throw new Error("The model did not return a valid wiring graph. Try again.");
+      throw new Error(
+        "The model did not return a valid wiring graph. Try again.",
+      );
     return {
       graph: normalizeAiGraph(response.output_parsed),
       assumptions: response.output_parsed.assumptions,
@@ -269,14 +278,19 @@ export const generateDocument = action({
     { campusId, kind, instructions, useDraftWiring, parentNodeId, sourceIds },
   ) => {
     if (parentNodeId && kind !== "wiring")
-      throw new Error("Internal wiring can only be generated for the wiring graph");
+      throw new Error(
+        "Internal wiring can only be generated for the wiring graph",
+      );
+    const { orgId } = await ctx.runQuery(internal.orgs.scopeFor, { campusId });
     await ctx.runMutation(internal.documents.setGenerating, {
+      orgId,
       campusId,
       kind,
       generating: true,
     });
     try {
       const allSources = await ctx.runQuery(internal.sources.readyForCampus, {
+        orgId,
         campusId,
       });
       const wanted = sourceIds ? new Set<string>(sourceIds) : null;
@@ -285,7 +299,7 @@ export const generateDocument = action({
         : allSources;
       const context = await ctx.runQuery(
         internal.documents.contextForGeneration,
-        { campusId, kind, useDraftWiring },
+        { orgId, campusId, kind, useDraftWiring },
       );
       const currentGraph =
         kind === "wiring" ? parseWiringYaml(context.current).graph : null;
@@ -392,6 +406,7 @@ export const generateDocument = action({
       }
 
       await ctx.runMutation(internal.documents.setDraft, {
+        orgId,
         campusId,
         kind,
         draft,
@@ -406,6 +421,7 @@ export const generateDocument = action({
       });
     } catch (e) {
       await ctx.runMutation(internal.documents.setGenerating, {
+        orgId,
         campusId,
         kind,
         generating: false,

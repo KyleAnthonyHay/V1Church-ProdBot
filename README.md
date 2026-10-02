@@ -18,8 +18,21 @@ shimmering text) on top of shadcn/ui.
 - **Explore:** the campus wiring diagram: device search, group visibility, fullscreen, PNG export, hover details, and double-click into a device's internal wiring.
 - **Admin:** three cards. "Add common pitfalls documentation" takes pasted notes or TXT/PDF uploads, generates an AI draft, shows it against the approved version, and lets you approve, discard, or edit by hand. "Add / update wiring diagram" has no notes box: "Edit diagram" (or clicking a device or connection line in the preview, or "Build diagram" when there is none yet) opens a full-screen workspace with the campus canvas on the left and, on the right, a chat that draws the diagram from a description ("Drums are on stage box A…", "the playback Mac now goes over Dante", "remove the demo box") plus the form for the selected device. A device owns its connections: the form lists what feeds it and what it feeds, each expandable to set the cable, signal, port and channel, with "Add input" / "Add output" buttons that ask which device before creating anything; clicking a connection line opens the device it belongs to with that connection expanded. A new device is added by name and starts unconnected; the only inferred connection is from the "+" beside a device on the canvas, which wires the new device to that one. A device can carry its own internal wiring: hover it and press "+" to open the workspace focused inside it, where the chat draws that device's complete internal wiring. Chat messages are kept on file as wiring notes for the other documents to draw on. Nothing is stored until "Save changes", which writes the whole diagram with a revision. The main diagram keeps a device with internal wiring as one node with an "N inside" badge and collapses connections leaving the group onto it; double-clicking opens the internal wiring as its own canvas, like opening a folder: only the devices inside are drawn. Anything outside that connects in appears as a small "from …" / "to …" pill at the edge, and a connection attached to the group itself shows as a pill with nothing wired to it yet so it can be reattached to the right device inside. Stored YAML stays flat: nested devices carry a `parent:` id, so pitfall references and device ids do not change. Connections carry a cable type (XLR, Cat 6, USB Type A/B/C, or free text). The pitfalls card has "Edit pitfalls": each entry is the issue, what is actually wrong, and the solution, with optional devices, check steps, and last-seen. Older "likely causes" / "fix" entries load into the same form and are rewritten as "issue" / "solution" on save. "Add documentation link" is a title-plus-URL form that writes to the shared links document. A collapsed "More" section holds the runbook, systems, glossary, reported-fix review, import/export, and clear-campus tools.
 
-There is no user authentication or password gate. Admin is a view-switch button.
-Conversations and checklists are shared within each campus, as requested for this MVP.
+## Accounts
+
+Sign-in is email and password ([Convex Auth](https://labs.convex.dev/auth)). A new account names its church and campuses on first sign-in; everything is scoped to that church. Admin is a view switch inside a church. Conversations and checklists are shared within each campus.
+
+**Demo:** "Try the demo" on the sign-in page (or `/app?demo`) signs in as `demo@prodbot.app` / `prodbot-demo`, a fictional church with two campuses, wiring diagrams, pitfalls, runbooks, chats, a draft awaiting review and a reported fix. It is reset every night; reset it by hand with `bunx convex run demo:seed`.
+
+**Deployment variables for sign-in:** `JWT_PRIVATE_KEY`, `JWKS` and `SITE_URL` must be set on each Convex deployment (see the Convex Auth manual setup).
+
+**Data from before sign-in existed** is moved into a church with:
+
+```sh
+bunx convex run orgs:claimLegacy '{"name":"V1 Church","email":"you@example.com"}'
+```
+
+Sign up with that email first; the command makes that account the church's owner.
 
 ## Local development
 

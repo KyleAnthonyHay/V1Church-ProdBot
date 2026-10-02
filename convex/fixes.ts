@@ -1,6 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { parsePitfalls, recordPitfallFix } from "../shared/docs";
+import { assertOwns, scope } from "./lib/access";
 
 export const propose = internalMutation({
   args: {
@@ -70,6 +71,7 @@ export const propose = internalMutation({
 export const list = query({
   args: { campusId: v.id("campuses") },
   handler: async (ctx, { campusId }) => {
+    await scope(ctx, campusId);
     return ctx.db
       .query("fixProposals")
       .withIndex("by_campus_status", (q) =>
@@ -83,6 +85,7 @@ export const review = mutation({
   args: { id: v.id("fixProposals"), approve: v.boolean() },
   handler: async (ctx, { id, approve }) => {
     const proposal = await ctx.db.get(id);
+    await assertOwns(ctx, proposal, "Proposal");
     if (!proposal || proposal.status !== "pending")
       throw new Error("Proposal already reviewed");
     if (approve) {

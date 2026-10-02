@@ -7,13 +7,17 @@ import {
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { sourceKindValidator, sourceTopicValidator } from "./schema";
+import { assertOwns, scope, viewer } from "./lib/access";
 
 export const list = query({
   args: { campusId: v.optional(v.id("campuses")) },
   handler: async (ctx, { campusId }) => {
+    const { orgId } = await scope(ctx, campusId);
     const rows = await ctx.db
       .query("sources")
-      .withIndex("by_campus", (q) => q.eq("campusId", campusId))
+      .withIndex("by_org_campus", (q) =>
+        q.eq("orgId", orgId).eq("campusId", campusId),
+      )
       .order("desc")
       .collect();
     // Don't ship full text to the list view.
@@ -27,13 +31,17 @@ export const list = query({
 export const getText = query({
   args: { id: v.id("sources") },
   handler: async (ctx, { id }) => {
-    return (await ctx.db.get(id))?.text ?? "";
+    const row = await ctx.db.get(id);
+    if (!row) return "";
+    await assertOwns(ctx, row, "Source");
+    return row.text ?? "";
   },
 });
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx, {}) => {
+    await viewer(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -47,7 +55,9 @@ export const createPaste = mutation({
   },
   handler: async (ctx, { campusId, title, text, topic }) => {
     if (!text.trim()) throw new Error("Nothing to add");
+    const { orgId } = await scope(ctx, campusId);
     return await ctx.db.insert("sources", {
+      orgId,
       campusId,
       title: title.trim() || `Pasted note ${new Date().toLocaleDateString()}`,
       kind: "paste",
@@ -68,7 +78,9 @@ export const createUpload = mutation({
     topic: v.optional(sourceTopicValidator),
   },
   handler: async (ctx, { campusId, title, kind, storageId, topic }) => {
+    const { orgId } = await scope(ctx, campusId);
     const id = await ctx.db.insert("sources", {
+      orgId,
       campusId,
       title,
       kind,
@@ -89,6 +101,7 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     const row = await ctx.db.get(id);
     if (!row) return;
+    await assertOwns(ctx, row, "Source");
     if (row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
   },
@@ -100,11 +113,16 @@ export const getInternal = internalQuery({
 });
 
 export const readyForCampus = internalQuery({
-  args: { campusId: v.optional(v.id("campuses")) },
-  handler: async (ctx, { campusId }) => {
+  args: {
+    orgId: v.id("organizations"),
+    campusId: v.optional(v.id("campuses")),
+  },
+  handler: async (ctx, { orgId, campusId }) => {
     const rows = await ctx.db
       .query("sources")
-      .withIndex("by_campus", (q) => q.eq("campusId", campusId))
+      .withIndex("by_org_campus", (q) =>
+        q.eq("orgId", orgId).eq("campusId", campusId),
+      )
       .order("asc")
       .collect();
     return rows

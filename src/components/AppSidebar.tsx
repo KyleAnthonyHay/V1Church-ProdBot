@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import type { Campus } from "@/App";
-import type { View } from "@/App";
+import type { Me, View } from "@/App";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/Marks";
 import {
   AlertTriangle,
+  LogOut,
   MessageSquare,
   Moon,
   Network,
@@ -31,6 +32,8 @@ export function AppSidebar({
   onDeleteConversation,
   onRenameConversation,
   aiConfigured,
+  me,
+  onSignOut,
   theme,
   onToggleTheme,
   collapsed,
@@ -52,6 +55,8 @@ export function AppSidebar({
     title: string,
   ) => Promise<unknown>;
   aiConfigured?: boolean;
+  me: Me;
+  onSignOut: () => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
   collapsed: boolean;
@@ -106,7 +111,7 @@ export function AppSidebar({
                 ProdBot
               </span>
               <span className="text-muted-foreground block truncate text-[11px]">
-                V1 {campus.name}
+                {campus.name}
               </span>
             </span>
           </a>
@@ -229,11 +234,16 @@ export function AppSidebar({
 
         <div className="flex items-center gap-2 px-3 pt-1 pb-3">
           <div className="bg-card border-border flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border px-2.5 py-2">
-            <span className="bg-primary text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
-              V1
+            <span className="bg-primary text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase">
+              {(me.name || me.email || "?").slice(0, 1)}
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm">
-              Production team
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm">
+                {me.name || me.email}
+              </span>
+              <span className="text-muted-foreground block truncate text-[11px]">
+                {me.org.name}
+              </span>
             </span>
             <Button
               variant="ghost"
@@ -247,6 +257,16 @@ export function AppSidebar({
               ) : (
                 <Moon className="size-3.5" />
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={onSignOut}
+            >
+              <LogOut className="size-3.5" />
             </Button>
           </div>
         </div>
