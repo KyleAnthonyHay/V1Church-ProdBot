@@ -305,7 +305,7 @@ const CAMPUS_NAMES = [
 ];
 
 function Hero() {
-  const [canvas, setCanvas] = useState<CanvasId>("sanctuary");
+  const [canvas, setCanvas] = useState<CanvasId>("ask");
   const [auto, setAuto] = useState(true);
   useEffect(() => {
     if (!auto) return;
@@ -369,34 +369,41 @@ function Hero() {
           transition={{ duration: 1.2, delay: 0.35, ease: EASE }}
           className="mt-12 md:mt-14"
         >
-          <div className="bg-card border-border relative h-[300px] overflow-hidden rounded-[24px] border bg-[radial-gradient(circle,color-mix(in_oklch,var(--foreground)_14%,transparent)_1px,transparent_1.3px)] [background-size:22px_22px] sm:h-[400px] md:h-[480px]">
+          <div className="bg-card border-border relative flex h-[400px] flex-col overflow-hidden rounded-[24px] border bg-[radial-gradient(circle,color-mix(in_oklch,var(--foreground)_14%,transparent)_1px,transparent_1.3px)] [background-size:22px_22px] sm:h-[440px] md:h-[500px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={canvas}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.25 } }}
-                className="absolute inset-0 flex items-center justify-center p-6 md:p-10"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
+                transition={{ duration: 0.35 }}
+                className="flex items-start gap-3 p-5 md:p-7"
               >
-                <CanvasIllustration
-                  id={canvas}
-                  className="text-foreground h-full w-full max-w-[760px]"
-                />
+                <BrandMark size={22} className="mt-0.5" />
+                <div className="max-w-xl">
+                  <p className="text-[15px] leading-snug font-medium">
+                    {active.problem}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-[13px] leading-relaxed">
+                    {active.fix}
+                  </p>
+                </div>
               </motion.div>
             </AnimatePresence>
-            <div className="absolute bottom-4 left-4 flex items-center gap-2.5 md:bottom-6 md:left-6">
-              <BrandMark size={22} />
+            <div className="relative min-h-0 flex-1">
               <AnimatePresence mode="wait">
-                <motion.span
+                <motion.div
                   key={canvas}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-muted-foreground text-[13px]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.25 } }}
+                  className="absolute inset-0 flex items-center justify-center px-4 pb-5 md:px-10 md:pb-8"
                 >
-                  {active.caption}
-                </motion.span>
+                  <CanvasIllustration
+                    id={canvas}
+                    className="text-foreground h-full w-full max-w-[720px]"
+                  />
+                </motion.div>
               </AnimatePresence>
             </div>
           </div>
@@ -1101,7 +1108,7 @@ function ClosingCta() {
         <div className="relative overflow-hidden rounded-[32px] bg-[oklch(0.2_0.01_60)] px-6 py-20 text-center text-white md:py-28">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center text-white/[0.07]">
             <CanvasIllustration
-              id="sanctuary"
+              id="wiring"
               mini
               className="w-[min(900px,140%)] max-w-none"
             />
