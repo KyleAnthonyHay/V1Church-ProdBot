@@ -42,7 +42,7 @@ export function AdminView({ campus }: { campus: Campus }) {
           <div className="text-muted-foreground text-xs font-medium">
             {campus.name}
           </div>
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h2 className="text-2xl font-medium tracking-[-0.03em]">
             Add documentation
           </h2>
         </header>
@@ -50,7 +50,7 @@ export function AdminView({ campus }: { campus: Campus }) {
         <div
           role="tablist"
           aria-label="Documentation type"
-          className="bg-muted/50 flex gap-1 rounded-xl p-1"
+          className="bg-muted flex gap-1 rounded-2xl p-1"
         >
           {CATEGORIES.map((c) => {
             const active = c.id === category;
@@ -61,9 +61,9 @@ export function AdminView({ campus }: { campus: Campus }) {
                 aria-selected={active}
                 onClick={() => setCategory(c.id)}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                   active
-                    ? "bg-background border-border border shadow-sm"
+                    ? "bg-card text-foreground shadow-[var(--shadow-soft)]"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >

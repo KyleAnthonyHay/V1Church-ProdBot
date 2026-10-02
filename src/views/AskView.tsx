@@ -13,6 +13,7 @@ import { Reasoning } from "@/components/ui/reasoning";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { Button } from "@/components/ui/button";
 import { Composer } from "@/components/Composer";
+import { Orb, campusPalette } from "@/components/Orb";
 import {
   AlertTriangle,
   BookOpen,
@@ -107,9 +108,15 @@ export function AskView({
 
   if (!inChat) {
     return (
-      <div className="flex h-full flex-col items-center justify-center overflow-y-auto px-4 pb-16">
-        <div className="flex w-full max-w-3xl flex-col items-center gap-7">
-          <div className="border-border text-muted-foreground flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
+      <div className="flex h-full flex-col items-center overflow-y-auto px-4 pt-[10vh] pb-16">
+        <div className="flex w-full max-w-3xl flex-col items-center gap-6">
+          <Orb
+            size={88}
+            palette={campusPalette(campus.name)}
+            active={busy}
+            className="animate-in fade-in zoom-in-90 duration-700"
+          />
+          <div className="border-border bg-card text-muted-foreground flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-[var(--shadow-soft)]">
             {documented === 0 ? (
               <>
                 <AlertTriangle className="size-3.5 text-amber-500" />
@@ -117,6 +124,7 @@ export function AskView({
               </>
             ) : (
               <>
+                <span className="size-1.5 rounded-full bg-emerald-500" />
                 {campus.name}
                 <span className="bg-border h-3 w-px" />
                 {documented === undefined
@@ -125,12 +133,16 @@ export function AskView({
               </>
             )}
           </div>
-          <h1 className="font-serif text-center text-5xl leading-none tracking-tight md:text-6xl">
-            What can I do for you?
+          <h1 className="text-center text-4xl font-medium tracking-[-0.035em] md:text-5xl">
+            What can I do for{" "}
+            <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
+              you?
+            </span>
           </h1>
           <Composer
             {...composerProps}
             autoFocus
+            className="mt-2"
             placeholder={`Ask about ${campus.name} production`}
           />
           {error && (
@@ -138,18 +150,25 @@ export function AskView({
               {error}
             </p>
           )}
-          <div className="flex flex-wrap justify-center gap-2">
-            {SUGGESTIONS.map((s) => (
-              <Button
+          <div className="mt-4 grid w-full grid-cols-2 gap-3 md:grid-cols-4">
+            {SUGGESTIONS.map((s, i) => (
+              <button
                 key={s.label}
-                variant="outline"
-                className="rounded-full px-4"
                 disabled={busy}
                 onClick={() => void submit(s.prompt)}
+                style={{ animationDelay: `${150 + i * 70}ms` }}
+                className="group bg-card border-border hover:border-ring/40 animate-in fade-in slide-in-from-bottom-2 fill-mode-both flex flex-col gap-3 rounded-2xl border p-4 text-left shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50"
               >
-                <s.icon className="size-4" />
-                {s.label}
-              </Button>
+                <span className="bg-muted text-foreground inline-flex size-8 items-center justify-center rounded-lg transition-colors group-hover:bg-foreground group-hover:text-background">
+                  <s.icon className="size-4" />
+                </span>
+                <span>
+                  <span className="block text-sm font-medium">{s.label}</span>
+                  <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs leading-relaxed">
+                    {s.prompt}
+                  </span>
+                </span>
+              </button>
             ))}
           </div>
         </div>
@@ -196,8 +215,8 @@ export function AskView({
           }
         />
         <p className="text-muted-foreground mt-2 text-center text-[11px]">
-          ProdBot only knows what is documented. Double-check before you
-          repatch anything live.
+          ProdBot only knows what is documented. Double-check before you repatch
+          anything live.
         </p>
       </div>
     </div>
@@ -217,24 +236,25 @@ function UserMessage({ message }: { message: Doc<"messages"> }) {
 function AssistantMessage({ message }: { message: Doc<"messages"> }) {
   const streaming = message.status === "streaming";
   return (
-    <div className="space-y-3">
-      <Reasoning
-        text={message.reasoning}
-        streaming={streaming && !message.content}
-        seconds={
-          message.finishedAt
-            ? (message.finishedAt - message.createdAt) / 1000
-            : undefined
-        }
-      />
-      {message.content && (
-        <div className="text-[15px] leading-7">
-          <Response>{message.content}</Response>
-        </div>
-      )}
-      {!streaming && message.content && (
-        <CopyButton text={message.content} />
-      )}
+    <div className="flex gap-3.5">
+      <Orb size={24} blur={4} active={streaming} className="mt-0.5" />
+      <div className="min-w-0 flex-1 space-y-3">
+        <Reasoning
+          text={message.reasoning}
+          streaming={streaming && !message.content}
+          seconds={
+            message.finishedAt
+              ? (message.finishedAt - message.createdAt) / 1000
+              : undefined
+          }
+        />
+        {message.content && (
+          <div className="text-[15px] leading-7">
+            <Response>{message.content}</Response>
+          </div>
+        )}
+        {!streaming && message.content && <CopyButton text={message.content} />}
+      </div>
     </div>
   );
 }

@@ -7,7 +7,8 @@ import {
 import type { Campus } from "@/App";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowUp, Loader2, MapPin } from "lucide-react";
+import { Orb, campusPalette } from "@/components/Orb";
+import { ArrowUp, Loader2 } from "lucide-react";
 
 export function Composer({
   value,
@@ -55,7 +56,7 @@ export function Composer({
       <form
         onSubmit={submit}
         className={cn(
-          "bg-card border-border focus-within:border-ring/50 relative flex flex-col rounded-[22px] border shadow-sm transition-colors",
+          "bg-card border-border focus-within:border-ring/60 relative flex flex-col rounded-[24px] border shadow-[var(--shadow-soft)] transition-all focus-within:shadow-[0_0_0_4px_color-mix(in_oklch,var(--ring),transparent_82%),var(--shadow-soft)]",
           status && "-mt-2.5",
         )}
       >
@@ -72,14 +73,14 @@ export function Composer({
         />
         <div className="flex items-center gap-2 px-3 pb-3">
           <span className="border-border/80 text-muted-foreground inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs">
-            <MapPin className="size-3.5" />
+            <Orb size={12} palette={campusPalette(campus.name)} blur={2} />
             {campus.name}
           </span>
           <div className="flex-1" />
           <Button
             type="submit"
             size="icon"
-            className="rounded-full"
+            className="size-9 rounded-full"
             disabled={busy || !value.trim()}
             aria-label="Send message"
             title="Send (Enter)"

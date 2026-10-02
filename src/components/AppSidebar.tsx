@@ -4,7 +4,7 @@ import type { Campus } from "@/App";
 import type { View } from "@/App";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Orb, campusPalette } from "@/components/Orb";
 import {
   AlertTriangle,
   MessageSquare,
@@ -86,21 +86,30 @@ export function AppSidebar({
       )}
       <aside
         className={cn(
-          "bg-sidebar text-sidebar-foreground border-sidebar-border h-full w-[272px] shrink-0 flex-col border-r",
+          "bg-sidebar text-sidebar-foreground h-full w-[264px] shrink-0 flex-col",
           mobileOpen
-            ? "fixed inset-y-0 left-0 z-40 flex shadow-2xl"
+            ? "border-sidebar-border fixed inset-y-0 left-0 z-40 flex border-r shadow-2xl"
             : collapsed
               ? "hidden"
               : "hidden md:flex",
         )}
       >
-        <div className="flex items-center justify-between px-3 pt-3 pb-1">
-          <div
-            className="min-w-0 truncate px-1 text-[15px] font-semibold tracking-tight"
-            title={`V1 ${campus.name}`}
+        <div className="flex items-center justify-between px-3 pt-3.5 pb-1">
+          <a
+            href="/"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg px-1 py-0.5"
+            title="ProdBot home"
           >
-            V1 {campus.name}
-          </div>
+            <Orb size={26} palette={campusPalette(campus.name)} blur={5} />
+            <span className="min-w-0 leading-tight">
+              <span className="block text-[15px] font-semibold tracking-tight">
+                ProdBot
+              </span>
+              <span className="text-muted-foreground block truncate text-[11px]">
+                V1 {campus.name}
+              </span>
+            </span>
+          </a>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -116,8 +125,17 @@ export function AppSidebar({
           </Button>
         </div>
 
-        <nav className="space-y-0.5 px-2 pt-2">
-          <NavItem icon={SquarePen} label="New chat" onClick={onNewChat} />
+        <div className="px-3 pt-3">
+          <button
+            onClick={onNewChat}
+            className="bg-card border-border hover:border-ring/40 flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-sm font-medium shadow-[var(--shadow-soft)] transition-all hover:-translate-y-px"
+          >
+            <SquarePen className="size-4" />
+            New chat
+          </button>
+        </div>
+
+        <nav className="space-y-0.5 px-3 pt-3">
           <NavItem
             icon={MessageSquare}
             label="Ask"
@@ -139,7 +157,7 @@ export function AppSidebar({
         </nav>
 
         <SectionLabel>Chats</SectionLabel>
-        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
+        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-2">
           {conversations?.length === 0 && (
             <p className="text-muted-foreground px-3 py-1.5 text-xs">
               No chats yet for {campus.name}.
@@ -153,8 +171,8 @@ export function AppSidebar({
                 className={cn(
                   "group relative flex items-center rounded-lg text-sm transition-all duration-150",
                   active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm before:bg-foreground before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/35 hover:text-sidebar-foreground hover:translate-x-0.5",
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-[var(--shadow-soft)]"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                 )}
               >
                 {renamingId === c._id ? (
@@ -174,7 +192,7 @@ export function AppSidebar({
                   />
                 ) : (
                   <button
-                    className="min-w-0 flex-1 truncate px-3 py-2 text-left"
+                    className="min-w-0 flex-1 truncate px-3 py-1.5 text-left"
                     title={active ? "Click to rename" : c.title}
                     onClick={() =>
                       active ? startRename(c) : onSelectConversation(c._id)
@@ -209,26 +227,28 @@ export function AppSidebar({
           </div>
         )}
 
-        <div className="border-sidebar-border flex items-center gap-2 border-t px-3 py-2.5">
-          <Avatar className="size-7">
-            <AvatarFallback className="text-[11px]">V1</AvatarFallback>
-          </Avatar>
-          <span className="min-w-0 flex-1 truncate text-sm">
-            Production team
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="text-muted-foreground"
-            aria-label="Toggle color theme"
-            onClick={onToggleTheme}
-          >
-            {theme === "dark" ? (
-              <Sun className="size-4" />
-            ) : (
-              <Moon className="size-4" />
-            )}
-          </Button>
+        <div className="flex items-center gap-2 px-3 pt-1 pb-3">
+          <div className="bg-card border-border flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border px-2.5 py-2">
+            <span className="bg-primary text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
+              V1
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm">
+              Production team
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground"
+              aria-label="Toggle color theme"
+              onClick={onToggleTheme}
+            >
+              {theme === "dark" ? (
+                <Sun className="size-3.5" />
+              ) : (
+                <Moon className="size-3.5" />
+              )}
+            </Button>
+          </div>
         </div>
       </aside>
     </>
@@ -237,7 +257,7 @@ export function AppSidebar({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-muted-foreground px-5 pt-5 pb-1.5 text-xs font-medium">
+    <div className="text-muted-foreground px-6 pt-6 pb-1.5 text-[11px] font-medium tracking-wide uppercase">
       {children}
     </div>
   );
@@ -259,12 +279,12 @@ function NavItem({
       aria-current={active ? "page" : undefined}
       onClick={onClick}
       className={cn(
-        "relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+        "relative flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-all duration-150",
         active
-          ? // Selected: solid fill, bold, and a left accent bar. No hover shift.
-            "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm before:bg-foreground before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full"
-          : // Hover: light tint that slides in, nothing that reads as selected.
-            "text-sidebar-foreground/80 hover:bg-sidebar-accent/35 hover:text-sidebar-foreground hover:translate-x-0.5",
+          ? // Selected: a raised white chip.
+            "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-[var(--shadow-soft)]"
+          : // Hover: a faint tint, nothing that reads as selected.
+            "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
       )}
     >
       <Icon className="size-4 shrink-0" />

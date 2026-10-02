@@ -7,8 +7,8 @@ import { AskView } from "@/views/AskView";
 import { CampusPicker } from "@/views/CampusPicker";
 import { usePersistedState } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin, Menu, PanelLeft } from "lucide-react";
+import { Orb, campusPalette } from "@/components/Orb";
+import { ArrowLeftRight, Loader2, Menu, PanelLeft } from "lucide-react";
 const ExploreView = lazy(() =>
   import("@/views/ExploreView").then((m) => ({ default: m.ExploreView })),
 );
@@ -20,7 +20,7 @@ export type Campus = Doc<"campuses">;
 export type View = "ask" | "explore" | "admin";
 
 const VIEW_TITLES: Record<View, string> = {
-  ask: "V1 ProdBot",
+  ask: "Ask",
   explore: "Explore",
   admin: "Admin",
 };
@@ -36,7 +36,7 @@ export default function App() {
   );
   const [theme, setTheme] = usePersistedState<"dark" | "light">(
     "prodbot.theme",
-    "dark",
+    "light",
   );
   const [collapsedPref, setCollapsedPref] = usePersistedState<"0" | "1">(
     "prodbot.sidebar",
@@ -102,7 +102,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="bg-sidebar flex h-full">
       <AppSidebar
         campus={campus}
         view={view}
@@ -125,8 +125,13 @@ export default function App() {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-1.5 px-3">
+      <div
+        className={
+          "bg-background border-border flex min-w-0 flex-1 flex-col md:my-2 md:mr-2 md:rounded-2xl md:border md:shadow-[var(--shadow-soft)] " +
+          (collapsed ? "md:ml-2" : "")
+        }
+      >
+        <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-4">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -147,15 +152,22 @@ export default function App() {
               <PanelLeft className="size-4" />
             </Button>
           )}
-          <span className="px-1 text-[15px] font-medium">
+          <span className="text-[15px] font-medium tracking-tight">
             {VIEW_TITLES[view]}
           </span>
-          <Badge variant="outline" className="text-muted-foreground">
+          <span className="text-muted-foreground/60 text-sm">/</span>
+          <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
+            <Orb size={14} palette={campusPalette(campus.name)} blur={3} />
             {campus.name}
-          </Badge>
+          </span>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={switchCampus}>
-            <MapPin className="size-3.5" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full px-3"
+            onClick={switchCampus}
+          >
+            <ArrowLeftRight className="size-3.5" />
             Switch campus
           </Button>
         </header>
