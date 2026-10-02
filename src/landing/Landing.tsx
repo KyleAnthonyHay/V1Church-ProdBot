@@ -13,8 +13,6 @@ import {
   ArrowRight,
   BookOpen,
   Brain,
-  ChevronLeft,
-  ChevronRight,
   Download,
   FileCheck2,
   History,
@@ -49,7 +47,6 @@ export default function Landing() {
         <AskSection />
         <ExploreSection />
         <AdminSection />
-        <ThemeSection />
         <ClosingCta />
       </main>
       <Footer />
@@ -344,12 +341,12 @@ const CHAPTERS = [
     body: "A volunteer describes the problem; ProdBot walks the wiring.",
   },
   {
-    start: 18.2,
+    start: 17.1,
     title: "Explore the wiring",
     body: "Focus a device to see what feeds it and its known pitfalls.",
   },
   {
-    start: 26.5,
+    start: 25.5,
     title: "Review in Admin",
     body: "Approve a reported fix and check the AI's draft.",
   },
@@ -836,78 +833,6 @@ function AdminSection() {
                 </p>
               </div>
             ))}
-          </div>
-        </Reveal>
-      </Container>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Light / dark                                                        */
-/* ------------------------------------------------------------------ */
-
-function ThemeSection() {
-  const [pos, setPos] = useState(50);
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  function update(clientX: number) {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    setPos(Math.min(100, Math.max(0, ((clientX - r.left) / r.width) * 100)));
-  }
-  return (
-    <section className="pt-28 md:pt-40">
-      <Container>
-        <SectionHeading
-          title={
-            <>
-              Easy on the eyes in a{" "}
-              <span className="font-serif font-normal italic">dark booth</span>
-            </>
-          }
-          body="Drag across to compare. ProdBot remembers the theme on each device, so the booth laptop can stay dark while the office stays light."
-        />
-        <Reveal className="mt-12">
-          <div className="bg-muted/80 rounded-[28px] p-3 md:p-10">
-            <div
-              ref={ref}
-              role="slider"
-              aria-label="Compare light and dark themes"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(pos)}
-              tabIndex={0}
-              className="relative cursor-ew-resize touch-none select-none"
-              onKeyDown={(e) => {
-                if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 5));
-                if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 5));
-              }}
-              onPointerDown={(e) => {
-                dragging.current = true;
-                e.currentTarget.setPointerCapture(e.pointerId);
-                update(e.clientX);
-              }}
-              onPointerMove={(e) => dragging.current && update(e.clientX)}
-              onPointerUp={() => (dragging.current = false)}
-            >
-              <Shot src="/landing/ask.webp" alt="ProdBot in light mode" />
-              <div
-                className="absolute inset-0"
-                style={{ clipPath: `inset(0 0 0 ${pos}%)` }}
-              >
-                <Shot src="/landing/ask-dark.webp" alt="ProdBot in dark mode" />
-              </div>
-              <div
-                className="absolute inset-y-0 w-px bg-white shadow-[0_0_0_1px_oklch(0_0_0/10%)]"
-                style={{ left: `${pos}%` }}
-              >
-                <span className="absolute top-1/2 left-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-black shadow-lg">
-                  <ChevronLeft className="-mr-1 size-4" />
-                  <ChevronRight className="-ml-1 size-4" />
-                </span>
-              </div>
-            </div>
           </div>
         </Reveal>
       </Container>
