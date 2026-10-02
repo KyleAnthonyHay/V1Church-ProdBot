@@ -7,7 +7,7 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { BrandMark, CampusMark } from "@/components/Marks";
+import { BrandMark } from "@/components/Marks";
 import { CANVASES, CanvasIllustration, type CanvasId } from "./Canvases";
 import { cn } from "@/lib/utils";
 import {
@@ -20,7 +20,6 @@ import {
   FileCheck2,
   History,
   ListChecks,
-  MapPin,
   MessageSquare,
   MousePointerClick,
   Network,
@@ -295,14 +294,6 @@ function Nav() {
 /* ------------------------------------------------------------------ */
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
-
-const CAMPUS_NAMES = [
-  "Brooklyn",
-  "Manhattan",
-  "Long Island",
-  "Miami",
-  "Indiana",
-];
 
 function Hero() {
   const [canvas, setCanvas] = useState<CanvasId>("ask");
@@ -1116,27 +1107,16 @@ function ClosingCta() {
           <div className="relative">
             <Reveal>
               <h2 className="mx-auto max-w-2xl text-[38px] leading-[1.05] font-medium tracking-[-0.04em] md:text-[56px]">
-                Which campus are{" "}
-                <span className="font-serif font-normal italic">you</span> at?
+                Ready before{" "}
+                <span className="font-serif font-normal italic">Sunday</span>{" "}
+                starts
               </h2>
             </Reveal>
             <Reveal delay={0.1}>
-              <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {CAMPUS_NAMES.map((name) => (
-                  <a
-                    key={name}
-                    href={APP_URL}
-                    className="flex items-center gap-2 rounded-full border border-white/15 bg-white/8 py-1.5 pr-4 pl-1.5 text-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/15"
-                  >
-                    <CampusMark
-                      name={name}
-                      size={24}
-                      className="rounded-full border-white/20 bg-white/10 text-white"
-                    />
-                    {name}
-                  </a>
-                ))}
-              </div>
+              <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-white/70">
+                Document the wiring once, keep the fixes current, and give every
+                volunteer someone to ask.
+              </p>
             </Reveal>
             <Reveal delay={0.2}>
               <a
@@ -1169,7 +1149,7 @@ function Footer() {
             href={APP_URL}
             className="hover:text-foreground flex items-center gap-1.5"
           >
-            <MapPin className="size-3.5" /> Pick a campus
+            <ArrowRight className="size-3.5" /> Open ProdBot
           </a>
           <a
             href="#ask"
