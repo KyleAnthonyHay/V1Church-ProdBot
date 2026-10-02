@@ -136,7 +136,7 @@ function AddCampus() {
         <button
           type="submit"
           disabled={busy}
-          className="bg-foreground text-background inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-medium"
+          className="bg-primary text-primary-foreground inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-medium"
         >
           {busy && <Loader2 className="size-3 animate-spin" />}
           Add

@@ -16,7 +16,7 @@ export function BrandMark({
     <span
       aria-hidden
       className={cn(
-        "bg-foreground text-background inline-flex shrink-0 items-center justify-center",
+        "bg-primary text-primary-foreground inline-flex shrink-0 items-center justify-center",
         active && "animate-pulse",
         className,
       )}

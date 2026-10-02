@@ -7,7 +7,7 @@ import {
   useTransform,
 } from "motion/react";
 import { BrandMark } from "@/components/Marks";
-import { CANVASES, CanvasIllustration, type CanvasId } from "./Canvases";
+import { CanvasIllustration } from "./Canvases";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -35,7 +35,7 @@ const SCROLL_ID = "landing-scroll";
 export default function Landing() {
   useEffect(() => {
     document.documentElement.classList.remove("dark");
-    document.title = "ProdBot · V1 Church production assistant";
+    document.title = "ProdBot · Production assistant for church tech teams";
   }, []);
   return (
     <div
@@ -46,7 +46,6 @@ export default function Landing() {
       <main>
         <Hero />
         <Systems />
-        <Platform />
         <AskSection />
         <ExploreSection />
         <AdminSection />
@@ -126,7 +125,7 @@ function PillLink({
       className={cn(
         "group inline-flex h-10 items-center gap-1.5 rounded-full px-5 text-sm font-medium transition-all duration-300",
         variant === "dark"
-          ? "bg-foreground text-background hover:shadow-[0_8px_24px_-8px_oklch(0.2_0.01_60/45%)]"
+          ? "bg-primary text-primary-foreground hover:shadow-[0_8px_24px_-8px_color-mix(in_oklch,var(--brand),transparent_45%)]"
           : "bg-card border-border hover:border-ring/50 border",
         className,
       )}
@@ -263,7 +262,7 @@ function Nav() {
         </nav>
         <div className="flex-1" />
         <PillLink
-          href="#platform"
+          href="#preview"
           variant="light"
           className="hidden h-9 sm:inline-flex"
         >
@@ -282,22 +281,6 @@ function Nav() {
 /* ------------------------------------------------------------------ */
 
 function Hero() {
-  const [canvas, setCanvas] = useState<CanvasId>("ask");
-  const [auto, setAuto] = useState(true);
-  useEffect(() => {
-    if (!auto) return;
-    const t = setInterval(
-      () =>
-        setCanvas((c) => {
-          const i = CANVASES.findIndex((x) => x.id === c);
-          return CANVASES[(i + 1) % CANVASES.length]!.id;
-        }),
-      6500,
-    );
-    return () => clearInterval(t);
-  }, [auto]);
-  const active = CANVASES.find((c) => c.id === canvas)!;
-
   return (
     <section className="relative pt-14 md:pt-20">
       <Container>
@@ -309,7 +292,7 @@ function Hero() {
             className="text-[44px] leading-[1.02] font-medium tracking-[-0.045em] md:text-[68px]"
           >
             Sunday production,{" "}
-            <span className="font-serif font-normal tracking-[-0.01em] italic">
+            <span className="text-primary font-serif font-normal tracking-[-0.01em] italic">
               answered.
             </span>
           </motion.h1>
@@ -319,9 +302,9 @@ function Hero() {
             transition={{ duration: 1, delay: 0.15, ease: EASE }}
             className="text-muted-foreground max-w-md text-[15px] leading-relaxed md:pb-2"
           >
-            ProdBot is the production assistant for V1 Church. It reads each
-            campus's wiring, pitfalls and runbook, then answers volunteers in
-            plain language when something goes quiet.
+            ProdBot is the production assistant for church tech teams. It reads
+            each campus's wiring, pitfalls and runbook, then answers volunteers
+            in plain language when something goes quiet.
           </motion.p>
         </div>
         <motion.div
@@ -330,111 +313,134 @@ function Hero() {
           transition={{ duration: 1, delay: 0.25, ease: EASE }}
           className="mt-7 flex flex-wrap gap-2.5"
         >
-          <PillLink href={APP_URL}>
-            Open ProdBot
+          <PillLink href={`${APP_URL}?demo`}>
+            Try the demo
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </PillLink>
-          <PillLink href={`${APP_URL}?demo`} variant="light">
-            Try the demo
+          <PillLink href={APP_URL} variant="light">
+            Sign in
           </PillLink>
         </motion.div>
 
-        {/* Canvas: pick an illustration below, it draws itself in. */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, delay: 0.35, ease: EASE }}
-          className="mt-12 md:mt-14"
+          id="preview"
+          className="mt-12 scroll-mt-20 md:mt-16"
         >
-          <div className="bg-card border-border relative flex h-[400px] flex-col overflow-hidden rounded-[24px] border bg-[radial-gradient(circle,color-mix(in_oklch,var(--foreground)_14%,transparent)_1px,transparent_1.3px)] [background-size:22px_22px] sm:h-[440px] md:h-[500px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={canvas}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
-                transition={{ duration: 0.35 }}
-                className="flex items-start gap-3 p-5 md:p-7"
-              >
-                <BrandMark size={22} className="mt-0.5" />
-                <div className="max-w-xl">
-                  <p className="text-[15px] leading-snug font-medium">
-                    {active.problem}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-[13px] leading-relaxed">
-                    {active.fix}
-                  </p>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-            <div className="relative min-h-0 flex-1">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={canvas}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.25 } }}
-                  className="absolute inset-0 flex items-center justify-center px-4 pb-5 md:px-10 md:pb-8"
-                >
-                  <CanvasIllustration
-                    id={canvas}
-                    className="text-foreground h-full w-full max-w-[720px]"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div
-            role="tablist"
-            aria-label="Choose a canvas"
-            className="mt-3 grid grid-cols-4 gap-2 md:gap-3"
-          >
-            {CANVASES.map((c) => {
-              const on = c.id === canvas;
-              return (
-                <button
-                  key={c.id}
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => {
-                    setAuto(false);
-                    setCanvas(c.id);
-                  }}
-                  className={cn(
-                    "group bg-card flex flex-col gap-2 rounded-2xl border p-2 text-left transition-all duration-300",
-                    on
-                      ? "border-foreground/80"
-                      : "border-border hover:border-ring/50",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "bg-muted flex aspect-[16/9] items-center justify-center rounded-xl px-2 transition-colors",
-                      on ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    <CanvasIllustration
-                      id={c.id}
-                      mini
-                      className="h-full w-full"
-                    />
-                  </span>
-                  <span
-                    className={cn(
-                      "px-1 pb-0.5 text-xs font-medium transition-colors md:text-[13px]",
-                      on ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {c.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <AppPreview />
         </motion.div>
       </Container>
     </section>
+  );
+}
+
+/** Chapters of public/landing/preview.mp4 (a recording of the demo church). */
+const CHAPTERS = [
+  {
+    start: 0,
+    title: "Ask a question",
+    body: "A volunteer describes the problem; ProdBot walks the wiring.",
+  },
+  {
+    start: 18.2,
+    title: "Explore the wiring",
+    body: "Focus a device to see what feeds it and its known pitfalls.",
+  },
+  {
+    start: 26.5,
+    title: "Review in Admin",
+    body: "Approve a reported fix and check the AI's draft.",
+  },
+];
+
+/** "Take a look at how the app works": the recorded walkthrough, chaptered. */
+function AppPreview() {
+  const video = useRef<HTMLVideoElement>(null);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(40);
+  const active = CHAPTERS.reduce((a, c, i) => (time >= c.start ? i : a), 0);
+  const chapterEnd = (i: number) => CHAPTERS[i + 1]?.start ?? duration;
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-[22px] font-medium tracking-[-0.03em] md:text-[26px]">
+          Take a look at how the app works
+        </h2>
+        <span className="text-muted-foreground text-[13px]">
+          Recorded in the demo church
+        </span>
+      </div>
+
+      <div className="bg-brand-soft relative overflow-hidden rounded-[28px] p-2 md:p-4">
+        <div className="border-border bg-card relative overflow-hidden rounded-[18px] border shadow-[0_1px_2px_oklch(0.2_0.01_210/6%),0_30px_60px_-30px_oklch(0.2_0.03_210/35%)]">
+          <video
+            ref={video}
+            src="/landing/preview.mp4"
+            poster="/landing/preview-poster.webp"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-label="ProdBot walkthrough: asking a question, exploring the wiring diagram and reviewing in Admin"
+            onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+            className="block aspect-[16/10] h-auto w-full"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-6">
+        {CHAPTERS.map((c, i) => {
+          const on = i === active;
+          const progress = on
+            ? Math.min(1, (time - c.start) / (chapterEnd(i) - c.start))
+            : i < active
+              ? 1
+              : 0;
+          return (
+            <button
+              key={c.title}
+              onClick={() => {
+                const v = video.current;
+                if (!v) return;
+                v.currentTime = c.start + 0.05;
+                void v.play().catch(() => {});
+              }}
+              className="group text-left"
+            >
+              <span className="bg-border relative block h-[2px] w-full overflow-hidden rounded-full">
+                <span
+                  className="bg-primary absolute inset-y-0 left-0 block"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </span>
+              <span className="mt-3 flex items-baseline gap-3">
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  0{i + 1}
+                </span>
+                <span
+                  className={cn(
+                    "text-[15px] font-medium transition-colors",
+                    on
+                      ? "text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                >
+                  {c.title}
+                </span>
+              </span>
+              <span className="text-muted-foreground mt-1 block pl-7 text-sm leading-relaxed">
+                {c.body}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -481,144 +487,6 @@ function Systems() {
             ))}
           </div>
         </div>
-      </Container>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Platform overview                                                   */
-/* ------------------------------------------------------------------ */
-
-const TOOLS = [
-  {
-    id: "ask",
-    title: "Ask",
-    body: "Volunteers ask in plain language and get answers grounded in that campus's docs.",
-    src: "/landing/chat.webp",
-    alt: "A ProdBot answer for a drummer with no click in his ears",
-  },
-  {
-    id: "explore",
-    title: "Explore",
-    body: "The whole signal chain as a live diagram you can search, focus and export.",
-    src: "/landing/explore.webp",
-    alt: "The Downtown wiring diagram in ProdBot Explore",
-  },
-  {
-    id: "admin",
-    title: "Admin",
-    body: "Describe the setup, let the AI draft it, and approve it when it's right.",
-    src: "/landing/admin.webp",
-    alt: "ProdBot Admin: adding campus documentation",
-  },
-] as const;
-const TOOL_MS = 7000;
-
-/** Three tools as numbered rows; the active one fills a hairline timer. */
-function Platform() {
-  const [active, setActive] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { margin: "-120px", root: scrollContainer });
-  const running = auto && inView;
-  useEffect(() => {
-    if (!running) return;
-    const t = setTimeout(
-      () => setActive((a) => (a + 1) % TOOLS.length),
-      TOOL_MS,
-    );
-    return () => clearTimeout(t);
-  }, [running, active]);
-  const tool = TOOLS[active]!;
-
-  return (
-    <section id="platform" className="scroll-mt-16 pt-28 md:pt-36">
-      <Container>
-        <Reveal>
-          <h2 className="max-w-xl text-[34px] leading-[1.08] font-medium tracking-[-0.035em] md:text-[44px]">
-            Three tools built on the{" "}
-            <span className="font-serif font-normal italic">same</span> campus
-            documentation
-          </h2>
-        </Reveal>
-
-        <div ref={ref} className="mt-10 grid gap-3 sm:grid-cols-3 sm:gap-8">
-          {TOOLS.map((t, i) => {
-            const on = i === active;
-            return (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setAuto(false);
-                  setActive(i);
-                }}
-                className="group text-left"
-              >
-                <span className="bg-border relative block h-px w-full overflow-hidden">
-                  {on && (
-                    <motion.span
-                      key={`${active}-${running}`}
-                      className="bg-foreground absolute inset-y-0 left-0 block"
-                      initial={{ width: running ? "0%" : "100%" }}
-                      animate={{ width: "100%" }}
-                      transition={{
-                        duration: running ? TOOL_MS / 1000 : 0,
-                        ease: "linear",
-                      }}
-                    />
-                  )}
-                </span>
-                <span className="mt-4 flex items-baseline gap-3">
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    0{i + 1}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-[15px] font-medium transition-colors",
-                      on
-                        ? "text-foreground"
-                        : "text-muted-foreground group-hover:text-foreground",
-                    )}
-                  >
-                    {t.title}
-                  </span>
-                </span>
-                <span
-                  className={cn(
-                    "mt-1.5 block max-w-xs pl-7 text-sm leading-relaxed transition-colors",
-                    on ? "text-muted-foreground" : "text-muted-foreground/60",
-                  )}
-                >
-                  {t.body}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <Reveal className="mt-10">
-          <div className="bg-muted/80 overflow-hidden rounded-[28px] p-3 md:p-10">
-            <div className="relative">
-              {/* Reserve the frame's height with an invisible copy. */}
-              <div className="invisible">
-                <Shot src={tool.src} alt="" />
-              </div>
-              <AnimatePresence initial={false}>
-                <motion.div
-                  key={tool.id}
-                  className="absolute inset-0"
-                  initial={{ opacity: 0, y: 16, scale: 0.99 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.3 } }}
-                  transition={{ duration: 0.6, ease: EASE }}
-                >
-                  <Shot src={tool.src} alt={tool.alt} />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </Reveal>
       </Container>
     </section>
   );
@@ -738,7 +606,7 @@ function LiveChatCard() {
   return (
     <div
       ref={ref}
-      className="relative flex h-full min-h-[440px] flex-col justify-end overflow-hidden rounded-[22px] bg-[oklch(0.2_0.006_60)] bg-[radial-gradient(circle,oklch(1_0_0/9%)_1px,transparent_1.2px)] [background-size:22px_22px] text-white"
+      className="relative flex h-full min-h-[440px] flex-col justify-end overflow-hidden rounded-[22px] bg-brand-deep bg-[radial-gradient(circle,oklch(1_0_0/9%)_1px,transparent_1.2px)] [background-size:22px_22px] text-white"
     >
       <div className="relative min-h-[260px] space-y-2.5 p-6 pb-2">
         {stage >= 1 && (
@@ -927,46 +795,49 @@ function AdminSection() {
           }
           body="Production leads keep each campus current: wiring, common pitfalls, documentation links and terminology, with every revision kept."
         />
-        <div className="mt-12 grid gap-3 md:grid-cols-[1fr_1.6fr]">
-          <div className="flex flex-col gap-3">
-            {ADMIN_STEPS.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.08}>
-                <div className="bg-muted/70 flex gap-4 rounded-2xl p-5">
-                  <span className="bg-card inline-flex size-9 shrink-0 items-center justify-center rounded-xl shadow-[var(--shadow-soft)]">
-                    <s.icon className="size-4" />
-                  </span>
-                  <div>
-                    <div className="text-muted-foreground text-[11px] tabular-nums">
-                      0{i + 1}
-                    </div>
-                    <div className="text-sm font-medium">{s.title}</div>
-                    <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                      {s.body}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-            <Reveal delay={0.24}>
-              <div className="bg-muted/70 flex items-center gap-3 rounded-2xl p-5">
-                <History className="size-4 shrink-0" />
-                <span className="text-sm">
-                  Every revision kept, and stale drafts flagged.
-                </span>
-              </div>
-            </Reveal>
+        <Reveal className="mt-12">
+          <div className="bg-brand-soft overflow-hidden rounded-[28px] p-2 md:p-4">
+            <Shot
+              src="/landing/admin.webp"
+              alt="ProdBot Admin overview: stats, items waiting for review, recent pitfalls"
+              className="rounded-[18px]"
+            />
           </div>
-          <Reveal delay={0.1} className="h-full">
-            <div className="bg-muted/80 group relative h-full min-h-[360px] overflow-hidden rounded-[22px]">
-              <div className="absolute top-8 left-8 w-[135%] transition-transform duration-700 group-hover:-translate-x-8">
-                <Shot
-                  src="/landing/admin-pitfalls.webp"
-                  alt="ProdBot Admin: a pitfalls draft awaiting review"
-                />
+        </Reveal>
+        <Reveal delay={0.1} className="mt-3">
+          <div className="border-border bg-card grid overflow-hidden rounded-2xl border sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ...ADMIN_STEPS,
+              {
+                icon: History,
+                title: "Nothing is lost",
+                body: "Every revision is kept, and stale drafts are flagged.",
+              },
+            ].map((s, i) => (
+              <div
+                key={s.title}
+                className={cn(
+                  "border-border p-5",
+                  i > 0 && "border-t sm:border-t-0",
+                  i % 2 === 1 && "sm:border-l",
+                  i >= 2 && "sm:border-t lg:border-t-0",
+                  i > 0 && "lg:border-l",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    0{i + 1}
+                  </span>
+                  <s.icon className="text-primary size-4" />
+                </div>
+                <div className="mt-6 text-[15px] font-medium">{s.title}</div>
+                <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                  {s.body}
+                </p>
               </div>
-            </div>
-          </Reveal>
-        </div>
+            ))}
+          </div>
+        </Reveal>
       </Container>
     </section>
   );
@@ -1052,7 +923,7 @@ function ClosingCta() {
   return (
     <section className="pt-28 pb-24 md:pt-40">
       <Container>
-        <div className="relative overflow-hidden rounded-[32px] bg-[oklch(0.2_0.01_60)] px-6 py-20 text-center text-white md:py-28">
+        <div className="relative overflow-hidden rounded-[32px] bg-brand-deep px-6 py-20 text-center text-white md:py-28">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center text-white/[0.07]">
             <CanvasIllustration
               id="wiring"
@@ -1098,7 +969,7 @@ function Footer() {
           <BrandMark size={18} />
           <span className="font-medium">ProdBot</span>
         </div>
-        <span>The production assistant for V1 Church volunteers.</span>
+        <span>The production assistant for church tech teams.</span>
         <div className="flex-1" />
         <div className="flex gap-5">
           <a
