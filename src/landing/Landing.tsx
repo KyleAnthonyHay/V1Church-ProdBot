@@ -3,7 +3,6 @@ import {
   AnimatePresence,
   motion,
   useInView,
-  useMotionValueEvent,
   useScroll,
   useTransform,
 } from "motion/react";
@@ -138,12 +137,10 @@ function PillLink({
 }
 
 function SectionHeading({
-  eyebrow,
   title,
   body,
   action,
 }: {
-  eyebrow: ReactNode;
   title: ReactNode;
   body?: ReactNode;
   action?: ReactNode;
@@ -151,9 +148,6 @@ function SectionHeading({
   return (
     <div className="grid gap-6 md:grid-cols-[1.1fr_1fr] md:items-end">
       <Reveal>
-        <div className="text-muted-foreground mb-4 flex items-center gap-2 text-[13px] font-medium">
-          {eyebrow}
-        </div>
         <h2 className="text-[34px] leading-[1.08] font-medium tracking-[-0.035em] md:text-[44px]">
           {title}
         </h2>
@@ -226,14 +220,6 @@ function FeatureCard({
     </Reveal>
   );
 }
-
-function Dot({ color }: { color: string }) {
-  return <span className={cn("inline-block size-1.5 rounded-full", color)} />;
-}
-
-const ASK_COLOR = "bg-[oklch(0.68_0.19_35)]";
-const EXPLORE_COLOR = "bg-[oklch(0.62_0.2_290)]";
-const ADMIN_COLOR = "bg-[oklch(0.7_0.12_200)]";
 
 /* ------------------------------------------------------------------ */
 /* Nav                                                                 */
@@ -656,12 +642,6 @@ function AskSection() {
     <section id="ask" className="scroll-mt-16 pt-28 md:pt-40">
       <Container>
         <SectionHeading
-          eyebrow={
-            <>
-              <Dot color={ASK_COLOR} />
-              Ask
-            </>
-          }
           title={
             <>
               Troubleshoot in{" "}
@@ -835,12 +815,6 @@ function ExploreSection() {
     <section id="explore" className="scroll-mt-16 pt-28 md:pt-40">
       <Container>
         <SectionHeading
-          eyebrow={
-            <>
-              <Dot color={EXPLORE_COLOR} />
-              Explore
-            </>
-          }
           title={
             <>
               See the whole signal chain,{" "}
@@ -893,8 +867,6 @@ function ZoomShowcase() {
   });
   const focusOpacity = useTransform(scrollYProgress, [0.6, 0.9], [0, 1]);
   const zoom = useTransform(scrollYProgress, [0, 1], [1.08, 1]);
-  const [focused, setFocused] = useState(false);
-  useMotionValueEvent(scrollYProgress, "change", (v) => setFocused(v > 0.75));
   return (
     <div
       ref={ref}
@@ -915,15 +887,6 @@ function ZoomShowcase() {
           />
         </motion.div>
       </motion.div>
-      <div className="bg-card/90 border-border absolute bottom-6 left-6 flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs shadow-[var(--shadow-soft)] backdrop-blur md:bottom-14 md:left-14">
-        <span
-          className={cn(
-            "size-1.5 rounded-full transition-colors duration-500",
-            focused ? EXPLORE_COLOR : "bg-muted-foreground/50",
-          )}
-        />
-        {focused ? "Focused on SoundGrid server" : "Whole campus · 22 devices"}
-      </div>
     </div>
   );
 }
@@ -955,12 +918,6 @@ function AdminSection() {
     <section id="admin" className="scroll-mt-16 pt-28 md:pt-40">
       <Container>
         <SectionHeading
-          eyebrow={
-            <>
-              <Dot color={ADMIN_COLOR} />
-              Admin
-            </>
-          }
           title={
             <>
               Documentation that stays a{" "}
@@ -1032,7 +989,6 @@ function ThemeSection() {
     <section className="pt-28 md:pt-40">
       <Container>
         <SectionHeading
-          eyebrow="Light and dark"
           title={
             <>
               Easy on the eyes in a{" "}
