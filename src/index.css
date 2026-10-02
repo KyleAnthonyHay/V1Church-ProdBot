@@ -53,7 +53,7 @@
 }
 
 :root {
-    /* Warm paper neutrals; brand color lives in the orb gradients below. */
+    /* Warm paper neutrals. */
     --background: oklch(0.986 0.003 85);
     --foreground: oklch(0.17 0.006 60);
     --card: oklch(1 0 0);
@@ -86,11 +86,6 @@
     --sidebar-accent-foreground: oklch(0.17 0.006 60);
     --sidebar-border: oklch(0.915 0.005 80);
     --sidebar-ring: oklch(0.7 0.01 70);
-    /* Orb palette: coral, ember, violet, sky. */
-    --orb-a: oklch(0.72 0.19 35);
-    --orb-b: oklch(0.83 0.15 70);
-    --orb-c: oklch(0.62 0.21 300);
-    --orb-d: oklch(0.78 0.11 220);
     --shadow-soft: 0 1px 2px oklch(0.2 0.01 60 / 4%), 0 8px 24px -12px oklch(0.2 0.01 60 / 12%);
 }
 
@@ -126,10 +121,6 @@
     --sidebar-accent-foreground: oklch(0.98 0.003 85);
     --sidebar-border: oklch(1 0 0 / 7%);
     --sidebar-ring: oklch(0.56 0.01 70);
-    --orb-a: oklch(0.7 0.19 35);
-    --orb-b: oklch(0.8 0.15 70);
-    --orb-c: oklch(0.6 0.21 300);
-    --orb-d: oklch(0.72 0.11 220);
     --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 12px 32px -16px oklch(0 0 0 / 60%);
 }
 
@@ -151,45 +142,6 @@ body { @apply bg-background text-foreground antialiased; }
 .font-serif { font-family: var(--font-serif); }
 /* Thin, unobtrusive scrollbars like the reference UI. */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-
-/* ---- Orb: the ProdBot mark. A slowly turning mesh of warm light. ---- */
-.orb {
-  position: relative;
-  border-radius: 9999px;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--orb-b);
-  box-shadow: inset 0 -8px 24px oklch(0.2 0.05 30 / 25%), inset 0 6px 16px oklch(1 0 0 / 35%);
-}
-.orb::before {
-  content: "";
-  position: absolute;
-  inset: -35%;
-  background:
-    radial-gradient(40% 40% at 30% 30%, var(--orb-a), transparent 70%),
-    radial-gradient(45% 45% at 72% 38%, var(--orb-c), transparent 70%),
-    radial-gradient(40% 40% at 45% 78%, var(--orb-d), transparent 70%),
-    radial-gradient(35% 35% at 60% 60%, var(--orb-b), transparent 70%);
-  filter: blur(var(--orb-blur, 12px));
-  animation: orb-spin var(--orb-speed, 14s) linear infinite;
-}
-.orb::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(60% 50% at 35% 25%, oklch(1 0 0 / 55%), transparent 60%);
-  mix-blend-mode: soft-light;
-}
-.orb[data-active="true"]::before { animation-duration: 3.5s; }
-@keyframes orb-spin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.12); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .orb::before { animation: none; }
-}
 
 /* Landing marquee: the track holds two copies, so -50% loops seamlessly. */
 @utility animate-marquee {

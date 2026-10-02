@@ -1,5 +1,5 @@
 import type { Campus } from "@/App";
-import { Orb, campusPalette } from "@/components/Orb";
+import { BrandMark, CampusMark } from "@/components/Marks";
 import { ArrowRight } from "lucide-react";
 
 /** Landing page: pick the campus you are working in. */
@@ -14,7 +14,7 @@ export function CampusPicker({
     <div className="flex h-full flex-col overflow-y-auto">
       <header className="flex items-center px-5 py-4">
         <a href="/" className="flex items-center gap-2.5">
-          <Orb size={24} blur={4} />
+          <BrandMark size={24} />
           <span className="text-[15px] font-semibold tracking-tight">
             ProdBot
           </span>
@@ -43,11 +43,10 @@ export function CampusPicker({
                 style={{ animationDelay: `${120 + i * 60}ms` }}
                 className="group bg-card border-border hover:border-ring/40 focus-visible:ring-ring/50 animate-in fade-in slide-in-from-bottom-3 fill-mode-both flex items-center gap-4 rounded-2xl border p-4 text-left shadow-[var(--shadow-soft)] transition-all duration-300 outline-none hover:-translate-y-0.5 focus-visible:ring-2"
               >
-                <Orb
-                  size={44}
-                  blur={6}
-                  palette={campusPalette(c.name)}
-                  className="transition-transform duration-500 group-hover:scale-110"
+                <CampusMark
+                  name={c.name}
+                  size={40}
+                  className="group-hover:border-foreground/30 transition-colors duration-300"
                 />
                 <span className="flex-1">
                   <span className="block text-base font-medium">{c.name}</span>

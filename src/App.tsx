@@ -7,7 +7,7 @@ import { AskView } from "@/views/AskView";
 import { CampusPicker } from "@/views/CampusPicker";
 import { usePersistedState } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
-import { Orb, campusPalette } from "@/components/Orb";
+import { CampusMark } from "@/components/Marks";
 import { ArrowLeftRight, Loader2, Menu, PanelLeft } from "lucide-react";
 const ExploreView = lazy(() =>
   import("@/views/ExploreView").then((m) => ({ default: m.ExploreView })),
@@ -157,7 +157,7 @@ export default function App() {
           </span>
           <span className="text-muted-foreground/60 text-sm">/</span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <Orb size={14} palette={campusPalette(campus.name)} blur={3} />
+            <CampusMark name={campus.name} size={18} />
             {campus.name}
           </span>
           <div className="flex-1" />

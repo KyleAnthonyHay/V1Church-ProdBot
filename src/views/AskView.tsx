@@ -13,7 +13,7 @@ import { Reasoning } from "@/components/ui/reasoning";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { Button } from "@/components/ui/button";
 import { Composer } from "@/components/Composer";
-import { Orb, campusPalette } from "@/components/Orb";
+import { BrandMark } from "@/components/Marks";
 import {
   AlertTriangle,
   BookOpen,
@@ -110,11 +110,10 @@ export function AskView({
     return (
       <div className="flex h-full flex-col items-center overflow-y-auto px-4 pt-[10vh] pb-16">
         <div className="flex w-full max-w-3xl flex-col items-center gap-6">
-          <Orb
-            size={88}
-            palette={campusPalette(campus.name)}
+          <BrandMark
+            size={52}
             active={busy}
-            className="animate-in fade-in zoom-in-90 duration-700"
+            className="animate-in fade-in zoom-in-90 shadow-[var(--shadow-soft)] duration-700"
           />
           <div className="border-border bg-card text-muted-foreground flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-[var(--shadow-soft)]">
             {documented === 0 ? (
@@ -237,7 +236,7 @@ function AssistantMessage({ message }: { message: Doc<"messages"> }) {
   const streaming = message.status === "streaming";
   return (
     <div className="flex gap-3.5">
-      <Orb size={24} blur={4} active={streaming} className="mt-0.5" />
+      <BrandMark size={24} active={streaming} className="mt-0.5" />
       <div className="min-w-0 flex-1 space-y-3">
         <Reasoning
           text={message.reasoning}

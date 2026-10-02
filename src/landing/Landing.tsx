@@ -7,11 +7,11 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { Orb, type OrbPalette } from "@/components/Orb";
+import { BrandMark, CampusMark } from "@/components/Marks";
+import { CANVASES, CanvasIllustration, type CanvasId } from "./Canvases";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
-  ArrowUp,
   BookOpen,
   Brain,
   ChevronLeft,
@@ -260,7 +260,7 @@ function Nav() {
     >
       <Container className="flex h-16 items-center gap-8">
         <a href="/" className="flex items-center gap-2.5">
-          <Orb size={24} blur={4} />
+          <BrandMark size={24} />
           <span className="text-[17px] font-semibold tracking-[-0.02em]">
             ProdBot
           </span>
@@ -296,72 +296,30 @@ function Nav() {
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
-const CAMPUSES: {
-  name: string;
-  palette: OrbPalette;
-  line: string;
-  question: string;
-}[] = [
-  {
-    name: "Brooklyn",
-    palette: "ember",
-    line: "Wiring diagram on file",
-    question: "Walk me through the Sunday setup order.",
-  },
-  {
-    name: "Manhattan",
-    palette: "aurora",
-    line: "Its own docs, its own answers",
-    question: "What is documented for this campus?",
-  },
-  {
-    name: "Long Island",
-    palette: "lagoon",
-    line: "Pitfalls written symptom-first",
-    question: "The drummer has no click in his ears. What do I check first?",
-  },
-  {
-    name: "Miami",
-    palette: "citrus",
-    line: "Every device, searchable",
-    question: "What happens if the SoundGrid server drops off the network?",
-  },
-  {
-    name: "Indiana",
-    palette: "dusk",
-    line: "Glossary shared across campuses",
-    question: "What does FOH stand for?",
-  },
-];
-
-const MODES = [
-  { id: "ask", label: "Ask", color: ASK_COLOR },
-  { id: "explore", label: "Explore", color: EXPLORE_COLOR },
-  { id: "admin", label: "Admin", color: ADMIN_COLOR },
-] as const;
-type Mode = (typeof MODES)[number]["id"];
-
-const TOPICS = [
-  "Troubleshoot",
-  "Sunday setup",
-  "Signal chain",
-  "Glossary",
-  "Wiring",
-  "Pitfalls",
+const CAMPUS_NAMES = [
+  "Brooklyn",
+  "Manhattan",
+  "Long Island",
+  "Miami",
+  "Indiana",
 ];
 
 function Hero() {
-  const [index, setIndex] = useState(0);
-  const [mode, setMode] = useState<Mode>("ask");
-  const [paused, setPaused] = useState(false);
-  const n = CAMPUSES.length;
+  const [canvas, setCanvas] = useState<CanvasId>("sanctuary");
+  const [auto, setAuto] = useState(true);
   useEffect(() => {
-    if (paused || mode !== "ask") return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % n), 4200);
+    if (!auto) return;
+    const t = setInterval(
+      () =>
+        setCanvas((c) => {
+          const i = CANVASES.findIndex((x) => x.id === c);
+          return CANVASES[(i + 1) % CANVASES.length]!.id;
+        }),
+      6500,
+    );
     return () => clearInterval(t);
-  }, [paused, mode, n]);
-  const go = (d: number) => setIndex((i) => (i + d + n) % n);
-  const active = CAMPUSES[index]!;
+  }, [auto]);
+  const active = CANVASES.find((c) => c.id === canvas)!;
 
   return (
     <section className="relative pt-14 md:pt-20">
@@ -404,258 +362,95 @@ function Hero() {
           </PillLink>
         </motion.div>
 
-        {/* Showcase panel */}
+        {/* Canvas: pick an illustration below, it draws itself in. */}
         <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, delay: 0.35, ease: EASE }}
-          className="bg-muted/80 relative mt-12 overflow-hidden rounded-[28px] p-2 md:mt-14"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
+          className="mt-12 md:mt-14"
         >
-          <div className="relative grid grid-cols-3 gap-1">
-            {MODES.map((m) => {
-              const on = m.id === mode;
+          <div className="bg-card border-border relative h-[300px] overflow-hidden rounded-[24px] border bg-[radial-gradient(circle,color-mix(in_oklch,var(--foreground)_14%,transparent)_1px,transparent_1.3px)] [background-size:22px_22px] sm:h-[400px] md:h-[480px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={canvas}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.25 } }}
+                className="absolute inset-0 flex items-center justify-center p-6 md:p-10"
+              >
+                <CanvasIllustration
+                  id={canvas}
+                  className="text-foreground h-full w-full max-w-[760px]"
+                />
+              </motion.div>
+            </AnimatePresence>
+            <div className="absolute bottom-4 left-4 flex items-center gap-2.5 md:bottom-6 md:left-6">
+              <BrandMark size={22} />
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={canvas}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-muted-foreground text-[13px]"
+                >
+                  {active.caption}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Choose a canvas"
+            className="mt-3 grid grid-cols-4 gap-2 md:gap-3"
+          >
+            {CANVASES.map((c) => {
+              const on = c.id === canvas;
               return (
                 <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
+                  key={c.id}
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => {
+                    setAuto(false);
+                    setCanvas(c.id);
+                  }}
                   className={cn(
-                    "relative flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-medium transition-colors",
+                    "group bg-card flex flex-col gap-2 rounded-2xl border p-2 text-left transition-all duration-300",
                     on
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "border-foreground/80"
+                      : "border-border hover:border-ring/50",
                   )}
                 >
-                  {on && (
-                    <motion.span
-                      layoutId="mode-pill"
-                      className="bg-card absolute inset-0 rounded-2xl shadow-[var(--shadow-soft)]"
-                      transition={{
-                        type: "spring",
-                        bounce: 0.18,
-                        duration: 0.6,
-                      }}
+                  <span
+                    className={cn(
+                      "bg-muted flex aspect-[16/9] items-center justify-center rounded-xl px-2 transition-colors",
+                      on ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    <CanvasIllustration
+                      id={c.id}
+                      mini
+                      className="h-full w-full"
                     />
-                  )}
-                  <span className="relative">
-                    <Dot color={m.color} />
                   </span>
-                  <span className="relative">{m.label}</span>
+                  <span
+                    className={cn(
+                      "px-1 pb-0.5 text-xs font-medium transition-colors md:text-[13px]",
+                      on ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {c.label}
+                  </span>
                 </button>
               );
             })}
           </div>
-
-          <div className="relative h-[440px] md:h-[520px]">
-            <AnimatePresence mode="wait">
-              {mode === "ask" && (
-                <motion.div
-                  key="ask"
-                  className="absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35 }}
-                >
-                  <OrbCarousel index={index} onPick={setIndex} />
-                  <div className="absolute inset-x-0 top-[262px] flex flex-col items-center px-4 text-center md:top-[330px]">
-                    <div className="flex items-center gap-4">
-                      <button
-                        aria-label="Previous campus"
-                        onClick={() => go(-1)}
-                        className="text-muted-foreground hover:text-foreground hover:bg-card rounded-full p-1.5 transition-colors"
-                      >
-                        <ChevronLeft className="size-4" />
-                      </button>
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={active.name}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.35, ease: EASE }}
-                          className="w-52"
-                        >
-                          <div className="text-[15px] font-medium">
-                            {active.name}
-                          </div>
-                          <div className="text-muted-foreground mt-0.5 text-xs">
-                            {active.line}
-                          </div>
-                        </motion.div>
-                      </AnimatePresence>
-                      <button
-                        aria-label="Next campus"
-                        onClick={() => go(1)}
-                        className="text-muted-foreground hover:text-foreground hover:bg-card rounded-full p-1.5 transition-colors"
-                      >
-                        <ChevronRight className="size-4" />
-                      </button>
-                    </div>
-                    <TypedQuestion text={active.question} />
-                  </div>
-                </motion.div>
-              )}
-              {mode === "explore" && (
-                <PanelShot
-                  key="explore"
-                  src="/landing/explore-focus.webp"
-                  alt="ProdBot Explore: the Brooklyn wiring diagram with a focused device"
-                />
-              )}
-              {mode === "admin" && (
-                <PanelShot
-                  key="admin"
-                  src="/landing/admin.webp"
-                  alt="ProdBot Admin: adding campus documentation"
-                />
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="relative flex items-center justify-center gap-1.5 px-2 pb-2 md:justify-between">
-            <div className="hidden flex-wrap gap-1 md:flex">
-              {TOPICS.map((t, i) => (
-                <span
-                  key={t}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 text-[13px]",
-                    i === 0
-                      ? "bg-card font-medium shadow-[var(--shadow-soft)]"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-            <PillLink href={APP_URL} className="h-9 px-4">
-              Try it
-            </PillLink>
-          </div>
         </motion.div>
       </Container>
     </section>
-  );
-}
-
-function PanelShot({ src, alt }: { src: string; alt: string }) {
-  return (
-    <motion.div
-      className="absolute inset-0 flex items-start justify-center overflow-hidden px-3 pt-4 md:px-10 md:pt-6"
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.5, ease: EASE }}
-    >
-      <Shot src={src} alt={alt} className="w-full max-w-[900px]" />
-    </motion.div>
-  );
-}
-
-/** Campus orbs on a rail; the active one sits front and centre. */
-function OrbCarousel({
-  index,
-  onPick,
-}: {
-  index: number;
-  onPick: (i: number) => void;
-}) {
-  const n = CAMPUSES.length;
-  const [wide, setWide] = useState(
-    () => typeof window === "undefined" || window.innerWidth >= 768,
-  );
-  useEffect(() => {
-    const onResize = () => setWide(window.innerWidth >= 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  const size = wide ? 190 : 150;
-  const gap = wide ? 190 : 120;
-  return (
-    <div className="absolute inset-x-0 top-6 h-[230px] md:top-10 md:h-[290px]">
-      {CAMPUSES.map((c, i) => {
-        // Signed distance from the active slot, wrapped to [-2, 2].
-        let d = i - index;
-        if (d > n / 2) d -= n;
-        if (d < -n / 2) d += n;
-        const center = d === 0;
-        const abs = Math.abs(d);
-        return (
-          <motion.button
-            key={c.name}
-            aria-label={center ? `Open ProdBot` : `Show ${c.name}`}
-            onClick={() =>
-              center ? (window.location.href = APP_URL) : onPick(i)
-            }
-            className="group absolute top-1/2 left-1/2 -mt-[var(--h)] -ml-[var(--h)]"
-            style={{ ["--h" as string]: `${size / 2}px`, zIndex: 10 - abs }}
-            initial={false}
-            animate={{
-              x: d * gap,
-              scale: center ? 1 : abs === 1 ? 0.7 : 0.48,
-              opacity: center ? 1 : abs === 1 ? 0.9 : 0.4,
-              filter: abs >= 2 ? "blur(3px)" : "blur(0px)",
-            }}
-            transition={{ type: "spring", stiffness: 110, damping: 20 }}
-          >
-            <Orb
-              size={size}
-              palette={c.palette}
-              blur={14}
-              speed={center ? 9 : 16}
-              active={center}
-              className="shadow-[0_30px_60px_-25px_oklch(0.4_0.1_30/45%)]"
-            />
-            <AnimatePresence>
-              {center && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.6 }}
-                  transition={{ duration: 0.3 }}
-                  className="absolute inset-0 m-auto flex size-12 items-center justify-center rounded-full bg-white/95 text-black shadow-lg transition-transform duration-300 group-hover:scale-110"
-                >
-                  <ArrowUp className="size-5 rotate-45" />
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-function TypedQuestion({ text }: { text: string }) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    setCount(0);
-    const t = setInterval(
-      () =>
-        setCount((c) => {
-          if (c >= text.length) clearInterval(t);
-          return Math.min(c + 1, text.length);
-        }),
-      28,
-    );
-    return () => clearInterval(t);
-  }, [text]);
-  return (
-    <div className="bg-card mt-5 flex w-full max-w-lg items-center gap-3 rounded-full py-1.5 pr-1.5 pl-5 text-left shadow-[var(--shadow-soft)]">
-      <span className="min-w-0 flex-1 truncate text-sm">
-        {text.slice(0, count)}
-        <span className="bg-foreground/70 ml-0.5 inline-block h-4 w-px translate-y-0.5 animate-pulse" />
-      </span>
-      <a
-        href={APP_URL}
-        aria-label="Ask ProdBot"
-        className="bg-foreground text-background inline-flex size-8 shrink-0 items-center justify-center rounded-full"
-      >
-        <ArrowUp className="size-4" />
-      </a>
-    </div>
   );
 }
 
@@ -711,16 +506,47 @@ function Systems() {
 /* Platform overview                                                   */
 /* ------------------------------------------------------------------ */
 
+const TOOLS = [
+  {
+    id: "ask",
+    title: "Ask",
+    body: "Volunteers ask in plain language and get answers grounded in that campus's docs.",
+    src: "/landing/chat.webp",
+    alt: "A ProdBot answer walking through the Brooklyn Sunday setup order",
+  },
+  {
+    id: "explore",
+    title: "Explore",
+    body: "The whole signal chain as a live diagram you can search, focus and export.",
+    src: "/landing/explore.webp",
+    alt: "The Brooklyn wiring diagram in ProdBot Explore",
+  },
+  {
+    id: "admin",
+    title: "Admin",
+    body: "Describe the setup, let the AI draft it, and approve it when it's right.",
+    src: "/landing/admin.webp",
+    alt: "ProdBot Admin: adding campus documentation",
+  },
+] as const;
+const TOOL_MS = 7000;
+
+/** Three tools as numbered rows; the active one fills a hairline timer. */
 function Platform() {
+  const [active, setActive] = useState(0);
+  const [auto, setAuto] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    container: scrollContainer,
-    offset: ["start end", "end start"],
-  });
-  const leftY = useTransform(scrollYProgress, [0, 1], [60, -40]);
-  const rightY = useTransform(scrollYProgress, [0, 1], [120, -80]);
-  const scale = useTransform(scrollYProgress, [0, 0.4], [0.94, 1]);
+  const inView = useInView(ref, { margin: "-120px", root: scrollContainer });
+  const running = auto && inView;
+  useEffect(() => {
+    if (!running) return;
+    const t = setTimeout(
+      () => setActive((a) => (a + 1) % TOOLS.length),
+      TOOL_MS,
+    );
+    return () => clearTimeout(t);
+  }, [running, active]);
+  const tool = TOOLS[active]!;
 
   return (
     <section id="platform" className="scroll-mt-16 pt-28 md:pt-36">
@@ -732,66 +558,83 @@ function Platform() {
             documentation
           </h2>
         </Reveal>
-        <div className="mt-10 grid gap-8 sm:grid-cols-3">
-          {[
-            {
-              t: "Ask",
-              c: ASK_COLOR,
-              b: "Volunteers ask in plain language and get answers grounded in that campus's docs.",
-            },
-            {
-              t: "Explore",
-              c: EXPLORE_COLOR,
-              b: "The whole signal chain as a live diagram you can search, focus and export.",
-            },
-            {
-              t: "Admin",
-              c: ADMIN_COLOR,
-              b: "Describe the setup, let the AI draft it, and approve it when it's right.",
-            },
-          ].map((x, i) => (
-            <Reveal key={x.t} delay={i * 0.08}>
-              <div className="flex items-center gap-2 text-[15px] font-medium">
-                <Dot color={x.c} />
-                {x.t}
-              </div>
-              <p className="text-muted-foreground mt-1.5 max-w-xs text-sm leading-relaxed">
-                {x.b}
-              </p>
-            </Reveal>
-          ))}
+
+        <div ref={ref} className="mt-10 grid gap-3 sm:grid-cols-3 sm:gap-8">
+          {TOOLS.map((t, i) => {
+            const on = i === active;
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setAuto(false);
+                  setActive(i);
+                }}
+                className="group text-left"
+              >
+                <span className="bg-border relative block h-px w-full overflow-hidden">
+                  {on && (
+                    <motion.span
+                      key={`${active}-${running}`}
+                      className="bg-foreground absolute inset-y-0 left-0 block"
+                      initial={{ width: running ? "0%" : "100%" }}
+                      animate={{ width: "100%" }}
+                      transition={{
+                        duration: running ? TOOL_MS / 1000 : 0,
+                        ease: "linear",
+                      }}
+                    />
+                  )}
+                </span>
+                <span className="mt-4 flex items-baseline gap-3">
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    0{i + 1}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[15px] font-medium transition-colors",
+                      on
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  >
+                    {t.title}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "mt-1.5 block max-w-xs pl-7 text-sm leading-relaxed transition-colors",
+                    on ? "text-muted-foreground" : "text-muted-foreground/60",
+                  )}
+                >
+                  {t.body}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <motion.div
-          ref={ref}
-          style={{ scale }}
-          className="bg-muted/80 relative mt-12 h-[300px] overflow-hidden rounded-[28px] sm:h-[460px] md:h-[600px]"
-        >
-          <div className="pointer-events-none absolute -top-40 -left-40 opacity-60 blur-3xl">
-            <Orb size={420} palette="ember" blur={60} speed={30} />
+        <Reveal className="mt-10">
+          <div className="bg-muted/80 overflow-hidden rounded-[28px] p-3 md:p-10">
+            <div className="relative">
+              {/* Reserve the frame's height with an invisible copy. */}
+              <div className="invisible">
+                <Shot src={tool.src} alt="" />
+              </div>
+              <AnimatePresence initial={false}>
+                <motion.div
+                  key={tool.id}
+                  className="absolute inset-0"
+                  initial={{ opacity: 0, y: 16, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.3 } }}
+                  transition={{ duration: 0.6, ease: EASE }}
+                >
+                  <Shot src={tool.src} alt={tool.alt} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
-          <div className="pointer-events-none absolute -right-32 -bottom-48 opacity-50 blur-3xl">
-            <Orb size={460} palette="aurora" blur={70} speed={34} />
-          </div>
-          <motion.div
-            style={{ y: leftY }}
-            className="absolute top-8 left-[4%] w-[62%] md:top-14"
-          >
-            <Shot
-              src="/landing/chat.webp"
-              alt="A ProdBot answer walking through the Brooklyn Sunday setup order"
-            />
-          </motion.div>
-          <motion.div
-            style={{ y: rightY }}
-            className="absolute top-24 right-[4%] w-[55%] md:top-40"
-          >
-            <Shot
-              src="/landing/explore.webp"
-              alt="The Brooklyn wiring diagram in ProdBot Explore"
-            />
-          </motion.div>
-        </motion.div>
+        </Reveal>
       </Container>
     </section>
   );
@@ -917,16 +760,8 @@ function LiveChatCard() {
   return (
     <div
       ref={ref}
-      className="relative flex h-full min-h-[440px] flex-col justify-end overflow-hidden rounded-[22px] bg-[oklch(0.25_0.03_40)] text-white"
+      className="relative flex h-full min-h-[440px] flex-col justify-end overflow-hidden rounded-[22px] bg-[oklch(0.2_0.006_60)] bg-[radial-gradient(circle,oklch(1_0_0/9%)_1px,transparent_1.2px)] [background-size:22px_22px] text-white"
     >
-      <div className="pointer-events-none absolute -top-24 -right-24 opacity-90 blur-3xl">
-        <Orb size={420} palette="ember" blur={50} speed={24} />
-      </div>
-      <div className="pointer-events-none absolute -bottom-40 -left-24 opacity-60 blur-3xl">
-        <Orb size={360} palette="aurora" blur={60} speed={28} />
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,oklch(0.18_0.02_40/75%))]" />
-
       <div className="relative min-h-[260px] space-y-2.5 p-6 pb-2">
         {stage >= 1 && (
           <motion.div
@@ -946,7 +781,7 @@ function LiveChatCard() {
               exit={{ opacity: 0 }}
               className="flex items-center gap-2 text-[13px] text-white/70"
             >
-              <Orb size={16} blur={2} active />
+              <BrandMark size={18} active className="bg-white text-black" />
               Thinking…
             </motion.div>
           )}
@@ -1168,9 +1003,6 @@ function AdminSection() {
           </div>
           <Reveal delay={0.1} className="h-full">
             <div className="bg-muted/80 group relative h-full min-h-[360px] overflow-hidden rounded-[22px]">
-              <div className="pointer-events-none absolute -right-24 -bottom-32 opacity-70 blur-3xl">
-                <Orb size={380} palette="lagoon" blur={50} speed={26} />
-              </div>
               <div className="absolute top-8 left-8 w-[135%] transition-transform duration-700 group-hover:-translate-x-8">
                 <Shot
                   src="/landing/admin.webp"
@@ -1267,10 +1099,13 @@ function ClosingCta() {
     <section className="pt-28 pb-24 md:pt-40">
       <Container>
         <div className="relative overflow-hidden rounded-[32px] bg-[oklch(0.2_0.01_60)] px-6 py-20 text-center text-white md:py-28">
-          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80 blur-[70px]">
-            <Orb size={620} palette="ember" blur={90} speed={20} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center text-white/[0.07]">
+            <CanvasIllustration
+              id="sanctuary"
+              mini
+              className="w-[min(900px,140%)] max-w-none"
+            />
           </div>
-          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,transparent,oklch(0.2_0.01_60/85%))]" />
           <div className="relative">
             <Reveal>
               <h2 className="mx-auto max-w-2xl text-[38px] leading-[1.05] font-medium tracking-[-0.04em] md:text-[56px]">
@@ -1280,14 +1115,18 @@ function ClosingCta() {
             </Reveal>
             <Reveal delay={0.1}>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {CAMPUSES.map((c) => (
+                {CAMPUS_NAMES.map((name) => (
                   <a
-                    key={c.name}
+                    key={name}
                     href={APP_URL}
                     className="flex items-center gap-2 rounded-full border border-white/15 bg-white/8 py-1.5 pr-4 pl-1.5 text-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/15"
                   >
-                    <Orb size={24} palette={c.palette} blur={3} />
-                    {c.name}
+                    <CampusMark
+                      name={name}
+                      size={24}
+                      className="rounded-full border-white/20 bg-white/10 text-white"
+                    />
+                    {name}
                   </a>
                 ))}
               </div>
@@ -1313,7 +1152,7 @@ function Footer() {
     <footer className="border-border border-t">
       <Container className="text-muted-foreground flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center">
         <div className="text-foreground flex items-center gap-2">
-          <Orb size={18} blur={3} />
+          <BrandMark size={18} />
           <span className="font-medium">ProdBot</span>
         </div>
         <span>The production assistant for V1 Church volunteers.</span>

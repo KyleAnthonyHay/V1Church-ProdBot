@@ -57,7 +57,11 @@ export function ExploreView({ campus }: { campus: Campus }) {
           {fullscreen ? "Exit fullscreen" : "Fullscreen"}
         </Button>
         {selectedNode && (
-          <Button variant="secondary" size="sm" onClick={() => setSelected(null)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSelected(null)}
+          >
             Focused on {selectedNode.label} · clear
           </Button>
         )}
@@ -99,10 +103,9 @@ export function ExploreView({ campus }: { campus: Campus }) {
               onFocusChange={setFocus}
             />
             <div className="text-muted-foreground pointer-events-none absolute right-2 bottom-2 text-[11px]">
-              {wiring.graph.nodes.length} devices ·{" "}
-              {wiring.graph.edges.length} connections · hover for
-              details, click to focus, double-click a device marked "inside"
-              for its internal wiring
+              {wiring.graph.nodes.length} devices · {wiring.graph.edges.length}{" "}
+              connections · hover for details, click to focus, double-click a
+              device marked "inside" for its internal wiring
             </div>
             {wiring.issues.length > 0 && (
               <div className="absolute top-10 right-2 max-w-sm rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">

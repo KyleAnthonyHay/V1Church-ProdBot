@@ -4,7 +4,7 @@ import type { Campus } from "@/App";
 import type { View } from "@/App";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Orb, campusPalette } from "@/components/Orb";
+import { BrandMark } from "@/components/Marks";
 import {
   AlertTriangle,
   MessageSquare,
@@ -100,7 +100,7 @@ export function AppSidebar({
             className="flex min-w-0 items-center gap-2.5 rounded-lg px-1 py-0.5"
             title="ProdBot home"
           >
-            <Orb size={26} palette={campusPalette(campus.name)} blur={5} />
+            <BrandMark size={26} />
             <span className="min-w-0 leading-tight">
               <span className="block text-[15px] font-semibold tracking-tight">
                 ProdBot

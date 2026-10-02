@@ -7,7 +7,7 @@ import {
 import type { Campus } from "@/App";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Orb, campusPalette } from "@/components/Orb";
+import { CampusMark } from "@/components/Marks";
 import { ArrowUp, Loader2 } from "lucide-react";
 
 export function Composer({
@@ -73,7 +73,7 @@ export function Composer({
         />
         <div className="flex items-center gap-2 px-3 pb-3">
           <span className="border-border/80 text-muted-foreground inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs">
-            <Orb size={12} palette={campusPalette(campus.name)} blur={2} />
+            <CampusMark name={campus.name} size={16} className="-ml-1" />
             {campus.name}
           </span>
           <div className="flex-1" />
