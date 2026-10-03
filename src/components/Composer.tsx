@@ -80,7 +80,8 @@ export function Composer({
           <Button
             type="submit"
             size="icon"
-            className="size-9 rounded-full"
+            // Kinetics "Squish Button": quick press-in, springy overshoot on release
+            className="size-9 rounded-full transition-[scale,translate,background-color,opacity] duration-500 ease-[cubic-bezier(.34,1.56,.64,1)] active:scale-[.88] active:duration-75 active:ease-out motion-reduce:active:scale-100"
             disabled={busy || !value.trim()}
             aria-label="Send message"
             title="Send (Enter)"

@@ -38,11 +38,7 @@ export function CampusPicker({
           <div className="animate-in fade-in slide-in-from-bottom-2 text-center duration-700">
             <div className="text-muted-foreground mb-3 text-sm">{church}</div>
             <h1 className="text-4xl font-medium tracking-[-0.035em] md:text-5xl">
-              Which campus are{" "}
-              <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
-                you
-              </span>{" "}
-              at?
+              Which campus are you at?
             </h1>
             <p className="text-muted-foreground mt-3 text-[15px]">
               ProdBot answers from that campus's wiring, pitfalls, and runbook.

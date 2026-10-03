@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-@import "@fontsource/instrument-serif";
 @import "@xyflow/react/dist/style.css";
 @source "../node_modules/streamdown/dist/*.js";
 
@@ -10,8 +8,7 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
-    --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --font-sans: "Helvetica Neue", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-brand: var(--brand);
     --color-brand-soft: var(--brand-soft);
@@ -148,7 +145,6 @@ html, body, #root { height: 100%; }
 body { @apply bg-background text-foreground antialiased; }
 .react-flow__attribution { display: none; }
 
-.font-serif { font-family: var(--font-serif); }
 /* Thin, unobtrusive scrollbars like the reference UI. */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
@@ -162,4 +158,9 @@ body { @apply bg-background text-foreground antialiased; }
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee { animation: none; }
+}
+
+/* Homepage: signal moving along a dashed line. */
+@keyframes dash {
+  to { stroke-dashoffset: -14; }
 }

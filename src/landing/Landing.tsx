@@ -3,32 +3,40 @@ import {
   AnimatePresence,
   motion,
   useInView,
+  useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
 } from "motion/react";
 import { BrandMark } from "@/components/Marks";
-import { CanvasIllustration } from "./Canvases";
+import { ShimmeringText } from "@/components/ui/shimmering-text";
 import { cn } from "@/lib/utils";
 import {
+  ArrowDown,
   ArrowRight,
-  BookOpen,
-  Brain,
-  Download,
-  FileCheck2,
-  History,
-  ListChecks,
-  MessageSquare,
-  MousePointerClick,
+  ArrowUp,
+  Check,
+  ChevronRight,
+  FileText,
+  MessageSquareText,
   Network,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Wrench,
+  NotebookPen,
+  TriangleAlert,
+  ListChecks,
+  BookOpen,
 } from "lucide-react";
 
 const APP_URL = "/app";
+const DEMO_URL = "/app?demo";
 const EASE = [0.22, 1, 0.36, 1] as const;
 const SCROLL_ID = "landing-scroll";
+
+/** The page scrolls inside #landing-scroll (html/body are fixed height). */
+const scrollContainer = {
+  get current() {
+    return document.getElementById(SCROLL_ID);
+  },
+} as React.RefObject<HTMLElement>;
 
 export default function Landing() {
   useEffect(() => {
@@ -43,11 +51,10 @@ export default function Landing() {
       <Nav />
       <main>
         <Hero />
-        <Systems />
-        <AskSection />
-        <ExploreSection />
-        <AdminSection />
-        <ClosingCta />
+        <Sunday />
+        <Sources />
+        <Watch />
+        <Closing />
       </main>
       <Footer />
     </div>
@@ -55,39 +62,8 @@ export default function Landing() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Shared bits                                                         */
+/* Shared                                                              */
 /* ------------------------------------------------------------------ */
-
-/** The page scrolls inside #landing-scroll (html/body are fixed height). */
-const scrollContainer = {
-  get current() {
-    return document.getElementById(SCROLL_ID);
-  },
-} as React.RefObject<HTMLElement>;
-
-function Reveal({
-  children,
-  delay = 0,
-  y = 24,
-  className,
-}: {
-  children: ReactNode;
-  delay?: number;
-  y?: number;
-  className?: string;
-}) {
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px", root: scrollContainer }}
-      transition={{ duration: 0.8, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 function Container({
   children,
@@ -98,122 +74,100 @@ function Container({
 }) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-[1180px] px-5 md:px-8", className)}
+      className={cn("mx-auto w-full max-w-[1200px] px-5 md:px-10", className)}
     >
       {children}
     </div>
   );
 }
 
-function PillLink({
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      className={className}
+      // Kinetics "stagger entrance": 14px rise and fade on an expo-out curve.
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px", root: scrollContainer }}
+      transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** The one button that matters: teal, with a light sweep on hover. */
+function PrimaryButton({
   href,
   children,
-  variant = "dark",
   className,
+  onDark,
 }: {
   href: string;
   children: ReactNode;
-  variant?: "dark" | "light";
   className?: string;
+  onDark?: boolean;
 }) {
+  // Kinetics-style magnetic pull: the button leans toward the cursor on a spring.
+  const x = useSpring(0, { stiffness: 320, damping: 24, mass: 1 });
+  const y = useSpring(0, { stiffness: 320, damping: 24, mass: 1 });
   return (
-    <a
+    <motion.a
       href={href}
+      style={{ x, y }}
+      // Kinetics "squish": quick press, overshooting release.
+      whileTap={{ scale: 0.88, transition: { duration: 0.075 } }}
+      transition={{ scale: { duration: 0.5, ease: [0.34, 1.56, 0.64, 1] } }}
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse") return;
+        const r = e.currentTarget.getBoundingClientRect();
+        x.set((e.clientX - (r.left + r.width / 2)) * 0.25);
+        y.set((e.clientY - (r.top + r.height / 2)) * 0.35);
+      }}
+      onPointerLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
       className={cn(
-        "group inline-flex h-10 items-center gap-1.5 rounded-full px-5 text-sm font-medium transition-all duration-300",
-        variant === "dark"
-          ? "bg-primary text-primary-foreground hover:shadow-[0_8px_24px_-8px_color-mix(in_oklch,var(--brand),transparent_45%)]"
-          : "bg-card border-border hover:border-ring/50 border",
+        "group relative inline-flex h-11 items-center gap-2 overflow-hidden rounded-full px-6 text-[15px] font-medium transition-shadow duration-300",
+        onDark
+          ? "bg-white text-black"
+          : "bg-primary text-primary-foreground hover:shadow-[0_10px_30px_-10px_color-mix(in_oklch,var(--brand),transparent_35%)]",
         className,
       )}
     >
-      {children}
-    </a>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]"
+      />
+      <span className="relative">{children}</span>
+      <ArrowRight className="relative size-4 transition-transform duration-300 group-hover:translate-x-1" />
+    </motion.a>
   );
 }
 
-function SectionHeading({
-  title,
-  body,
-  action,
-}: {
-  title: ReactNode;
-  body?: ReactNode;
-  action?: ReactNode;
-}) {
+function Shot({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="grid gap-6 md:grid-cols-[1.1fr_1fr] md:items-end">
-      <Reveal>
-        <h2 className="text-[34px] leading-[1.08] font-medium tracking-[-0.035em] md:text-[44px]">
-          {title}
-        </h2>
-      </Reveal>
-      <Reveal delay={0.1} className="flex flex-col items-start gap-5 md:pb-1">
-        {body && (
-          <p className="text-muted-foreground max-w-md text-[15px] leading-relaxed">
-            {body}
-          </p>
-        )}
-        {action}
-      </Reveal>
-    </div>
-  );
-}
-
-/** A screenshot of the real app in a soft frame. */
-function Shot({
-  src,
-  alt,
-  className,
-  priority,
-}: {
-  src: string;
-  alt: string;
-  className?: string;
-  priority?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "border-border bg-card overflow-hidden rounded-xl border shadow-[0_1px_2px_oklch(0.2_0.01_60/6%),0_30px_60px_-30px_oklch(0.2_0.01_60/30%)]",
-        className,
-      )}
-    >
+    <div className="border-border bg-card overflow-hidden rounded-xl border shadow-[0_1px_2px_oklch(0.2_0.01_210/6%),0_24px_48px_-28px_oklch(0.2_0.03_210/35%)]">
       <img
         src={src}
         alt={alt}
         width={1440}
         height={900}
-        loading={priority ? "eager" : "lazy"}
+        loading="lazy"
         decoding="async"
         draggable={false}
         className="block h-auto w-full"
       />
     </div>
-  );
-}
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  body,
-  delay = 0,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  body: string;
-  delay?: number;
-}) {
-  return (
-    <Reveal delay={delay} className="h-full">
-      <div className="group bg-muted/70 hover:bg-muted flex h-full flex-col rounded-2xl p-6 transition-colors duration-300">
-        <Icon className="text-foreground/80 size-[18px] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110" />
-        <div className="mt-14 text-[13px] font-medium">{title}</div>
-        <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-          {body}
-        </p>
-      </div>
-    </Reveal>
   );
 }
 
@@ -233,41 +187,38 @@ function Nav() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b transition-all duration-300",
+        "sticky top-0 z-50 border-b transition-colors duration-300",
         scrolled
-          ? "bg-background/80 border-border backdrop-blur-xl"
+          ? "bg-background/85 border-border backdrop-blur-xl"
           : "border-transparent",
       )}
     >
-      <Container className="flex h-16 items-center gap-8">
+      <Container className="flex h-16 items-center gap-6">
         <a href="/" className="flex items-center gap-2.5">
           <BrandMark size={24} />
           <span className="text-[17px] font-semibold tracking-[-0.02em]">
             ProdBot
           </span>
         </a>
-        <nav className="text-muted-foreground hidden items-center gap-6 text-sm md:flex">
-          {["Ask", "Explore", "Admin"].map((s) => (
-            <a
-              key={s}
-              href={`#${s.toLowerCase()}`}
-              className="hover:text-foreground transition-colors"
-            >
-              {s}
-            </a>
-          ))}
-        </nav>
         <div className="flex-1" />
-        <PillLink
-          href="#preview"
-          variant="light"
-          className="hidden h-9 sm:inline-flex"
+        <a
+          href="#sunday"
+          className="text-muted-foreground hover:text-foreground hidden text-sm transition-colors sm:inline"
         >
           How it works
-        </PillLink>
-        <PillLink href={APP_URL} className="h-9">
-          Open ProdBot
-        </PillLink>
+        </a>
+        <a
+          href={APP_URL}
+          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+        >
+          Sign in
+        </a>
+        <a
+          href={DEMO_URL}
+          className="border-border hover:border-foreground/30 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors"
+        >
+          Try the demo
+        </a>
       </Container>
     </header>
   );
@@ -277,562 +228,1031 @@ function Nav() {
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
+/** A clock that starts at 8:12:04 on a Sunday and keeps running. */
+function useSundayClock() {
+  const [s, setS] = useState(8 * 3600 + 12 * 60 + 4);
+  useEffect(() => {
+    const t = setInterval(() => setS((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return {
+    seconds: s,
+    label: `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`,
+    untilService: Math.max(0, Math.ceil((9 * 3600 - s) / 60)),
+  };
+}
+
 function Hero() {
+  const clock = useSundayClock();
   return (
-    <section className="relative pt-14 md:pt-20">
-      <Container>
-        <div className="grid gap-6 md:grid-cols-[1.15fr_1fr] md:items-end md:gap-8">
-          <motion.h1
+    <section className="relative">
+      <Container className="pt-10 pb-16 md:pt-16 md:pb-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-1 text-[13px] tabular-nums"
+        >
+          <span className="text-foreground font-medium">
+            Sunday {clock.label} AM
+          </span>
+          <span>Doors 8:00</span>
+          <span>Service 9:00</span>
+        </motion.div>
+
+        <div className="mt-8 grid gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EASE }}
+              className="text-[46px] leading-[0.98] font-medium tracking-[-0.045em] md:text-[72px]"
+            >
+              The click just dropped out.{" "}
+              <span className="text-muted-foreground/70">
+                Service is in {clock.untilService} minutes.
+              </span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.15, ease: EASE }}
+              className="text-muted-foreground mt-7 max-w-[440px] text-[17px] leading-relaxed"
+            >
+              ProdBot knows how your church is wired. A volunteer describes
+              what's wrong in plain words and gets the fix your team already
+              wrote down, step by step, before anyone has to call the production
+              lead.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.25, ease: EASE }}
+              className="mt-9 flex flex-wrap items-center gap-6"
+            >
+              <PrimaryButton href={DEMO_URL}>Try the demo</PrimaryButton>
+              <a
+                href="#watch"
+                className="text-foreground group inline-flex items-center gap-1.5 text-[15px] font-medium"
+              >
+                Watch a Sunday in 30 seconds
+                <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
+              </a>
+            </motion.div>
+          </div>
+
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: EASE }}
-            className="text-[44px] leading-[1.02] font-medium tracking-[-0.045em] md:text-[68px]"
+            transition={{ duration: 1, delay: 0.3, ease: EASE }}
           >
-            Sunday production,{" "}
-            <span className="text-primary font-serif font-normal tracking-[-0.01em] italic">
-              answered.
-            </span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.15, ease: EASE }}
-            className="text-muted-foreground max-w-md text-[15px] leading-relaxed md:pb-2"
-          >
-            ProdBot is the production assistant for church tech teams. It reads
-            each campus's wiring, pitfalls and runbook, then answers volunteers
-            in plain language when something goes quiet.
-          </motion.p>
+            <AgentConsole />
+          </motion.div>
         </div>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.25, ease: EASE }}
-          className="mt-7 flex flex-wrap gap-2.5"
-        >
-          <PillLink href={`${APP_URL}?demo`}>
-            Try the demo
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-          </PillLink>
-          <PillLink href={APP_URL} variant="light">
-            Sign in
-          </PillLink>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.35, ease: EASE }}
-          id="preview"
-          className="mt-12 scroll-mt-20 md:mt-16"
-        >
-          <AppPreview />
-        </motion.div>
+        <RunOfShow seconds={clock.seconds} />
       </Container>
     </section>
   );
 }
 
-/** Chapters of public/landing/preview.mp4 (a recording of the demo church). */
-const CHAPTERS = [
-  {
-    start: 0,
-    title: "Ask a question",
-    body: "A volunteer describes the problem; ProdBot walks the wiring.",
-  },
-  {
-    start: 17.1,
-    title: "Explore the wiring",
-    body: "Focus a device to see what feeds it and its known pitfalls.",
-  },
-  {
-    start: 25.5,
-    title: "Review in Admin",
-    body: "Approve a reported fix and check the AI's draft.",
-  },
-];
-
-/** "Take a look at how the app works": the recorded walkthrough, chaptered. */
-function AppPreview() {
-  const video = useRef<HTMLVideoElement>(null);
-  const [time, setTime] = useState(0);
-  const [duration, setDuration] = useState(40);
-  const active = CHAPTERS.reduce((a, c, i) => (time >= c.start ? i : a), 0);
-  const chapterEnd = (i: number) => CHAPTERS[i + 1]?.start ?? duration;
-
+/** Horizontal run of show, 6:45 to 9:45, with a playhead at "now". */
+function RunOfShow({ seconds }: { seconds: number }) {
+  const start = 6.75 * 3600;
+  const end = 9.75 * 3600;
+  const pct = (t: number) => ((t - start) / (end - start)) * 100;
+  const marks = [
+    { t: 7 * 3600, label: "Power on" },
+    { t: 7.33 * 3600, label: "Line check" },
+    { t: 8 * 3600, label: "Doors" },
+    { t: 8.25 * 3600, label: "Rehearsal" },
+    { t: 9 * 3600, label: "Service" },
+  ];
   return (
-    <div>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-[22px] font-medium tracking-[-0.03em] md:text-[26px]">
-          Take a look at how the app works
-        </h2>
-        <span className="text-muted-foreground text-[13px]">
-          Recorded in the demo church
-        </span>
-      </div>
-
-      <div className="bg-brand-soft relative overflow-hidden rounded-[28px] p-2 md:p-4">
-        <div className="border-border bg-card relative overflow-hidden rounded-[18px] border shadow-[0_1px_2px_oklch(0.2_0.01_210/6%),0_30px_60px_-30px_oklch(0.2_0.03_210/35%)]">
-          <video
-            ref={video}
-            src="/landing/preview.mp4"
-            poster="/landing/preview-poster.webp"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-label="ProdBot walkthrough: asking a question, exploring the wiring diagram and reviewing in Admin"
-            onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-            className="block aspect-[16/10] h-auto w-full"
+    <div className="mt-16 hidden md:block">
+      <div className="relative h-12">
+        <div className="bg-border absolute inset-x-0 top-6 h-px" />
+        {Array.from({ length: 13 }, (_, i) => start + i * 900).map((t) => (
+          <div
+            key={t}
+            className="bg-border absolute top-[20px] h-2 w-px"
+            style={{ left: `${pct(t)}%` }}
           />
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-6">
-        {CHAPTERS.map((c, i) => {
-          const on = i === active;
-          const progress = on
-            ? Math.min(1, (time - c.start) / (chapterEnd(i) - c.start))
-            : i < active
-              ? 1
-              : 0;
-          return (
-            <button
-              key={c.title}
-              onClick={() => {
-                const v = video.current;
-                if (!v) return;
-                v.currentTime = c.start + 0.05;
-                void v.play().catch(() => {});
-              }}
-              className="group text-left"
-            >
-              <span className="bg-border relative block h-[2px] w-full overflow-hidden rounded-full">
-                <span
-                  className="bg-primary absolute inset-y-0 left-0 block"
-                  style={{ width: `${progress * 100}%` }}
-                />
-              </span>
-              <span className="mt-3 flex items-baseline gap-3">
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  0{i + 1}
-                </span>
-                <span
-                  className={cn(
-                    "text-[15px] font-medium transition-colors",
-                    on
-                      ? "text-foreground"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                >
-                  {c.title}
-                </span>
-              </span>
-              <span className="text-muted-foreground mt-1 block pl-7 text-sm leading-relaxed">
-                {c.body}
-              </span>
-            </button>
-          );
-        })}
+        ))}
+        {marks.map((m) => (
+          <div
+            key={m.label}
+            className="absolute top-0 -translate-x-1/2 text-center"
+            style={{ left: `${pct(m.t)}%` }}
+          >
+            <div className="text-muted-foreground text-[11px] whitespace-nowrap">
+              {m.label}
+            </div>
+            <div className="bg-foreground/50 mx-auto mt-[9px] size-1.5 rounded-full" />
+          </div>
+        ))}
+        <motion.div
+          className="absolute top-3 -translate-x-1/2"
+          style={{ left: `${pct(seconds)}%` }}
+        >
+          <div className="bg-primary h-6 w-[2px] rounded-full" />
+          <div className="bg-primary/20 absolute -inset-x-1.5 -inset-y-0.5 animate-pulse rounded-full" />
+        </motion.div>
       </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Systems strip                                                       */
-/* ------------------------------------------------------------------ */
+/* ---- Agent console ------------------------------------------------- */
 
-const SYSTEMS = [
-  "Waves LV1",
-  "SoundGrid",
-  "Ableton Live",
-  "Focusrite Clarett",
-  "In-ear monitors",
-  "Stage racks",
-  "Front of house",
-  "XLR · Ethernet",
+type Scenario = {
+  question: string;
+  /** Beautiful UI-style step trace shown while it thinks. */
+  trace: string[];
+  /** Context the answer came from. */
+  sources: { kind: string; title: string }[];
+  path: string[];
+  checks: string[];
+};
+
+// Grounded in the demo church's Downtown wiring and pitfalls.
+const SCENARIOS: Scenario[] = [
+  {
+    question: "The drummer has no click in his ears.",
+    trace: [
+      "Read the Downtown wiring",
+      "Matched pitfall P-002",
+      "Checked runbook step 3",
+    ],
+    sources: [
+      { kind: "Pitfall", title: "P-002 · last seen Sep 21" },
+      { kind: "Wiring", title: "Downtown · 22 devices" },
+    ],
+    path: [
+      "Playback Mac",
+      "Clarett out 3",
+      "Stage box A · In 15",
+      "LV1 ch 15",
+      "Aux 1",
+      "Drummer IEM",
+    ],
+    checks: [
+      "Ableton output is the Clarett+, not the Mac speakers",
+      "Click track routed to output 3",
+      "LV1 ch 15 is metering and up in Aux 1",
+    ],
+  },
+  {
+    question: "Everything from FOH sounds glitchy, almost 8-bit.",
+    trace: [
+      "Read the Downtown wiring",
+      "Matched pitfall P-001",
+      "Checked the systems sheet",
+    ],
+    sources: [
+      { kind: "Pitfall", title: "P-001 · last seen Sep 14" },
+      { kind: "Systems", title: "Extreme Server-C" },
+    ],
+    path: [
+      "Stage box A",
+      "SoundGrid switch",
+      "SoundGrid server",
+      "FOH console",
+    ],
+    checks: [
+      "Setup → Inventory: server shows Assigned",
+      "Clock Master is the Extreme server, not Internal",
+      "Re-save the show file once it sounds right",
+    ],
+  },
+  {
+    question: "Lead vocal keeps cutting out during worship.",
+    trace: [
+      "Read the Downtown wiring",
+      "Matched pitfall P-004",
+      "Checked runbook step 5",
+    ],
+    sources: [
+      { kind: "Pitfall", title: "P-004 · last seen Sep 7" },
+      { kind: "Runbook", title: "7:30 · fresh batteries" },
+    ],
+    path: ["Vocal pack", "ULXD4Q receiver", "Rack IOX · In 1", "LV1 ch 17"],
+    checks: [
+      "Pack shows fewer than 3 battery bars",
+      "RF meter drops near the stage edge",
+      "Fresh batteries, or rescan and deploy a new group",
+    ],
+  },
 ];
 
-function Systems() {
-  return (
-    <section className="pt-20 md:pt-24">
-      <Container>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-[15px]">
-            Speaks the language of your signal chain
-          </p>
-          <a
-            href="#explore"
-            className="bg-card border-border hover:border-ring/50 hidden rounded-full border px-4 py-1.5 text-[13px] transition-colors sm:inline-block"
-          >
-            See the wiring
-          </a>
-        </div>
-        <div className="border-border relative mt-8 overflow-hidden border-y py-8 [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
-          <div className="animate-marquee flex w-max gap-16 pr-16">
-            {[...SYSTEMS, ...SYSTEMS].map((s, i) => (
-              <span
-                key={i}
-                aria-hidden={i >= SYSTEMS.length}
-                className="text-muted-foreground/70 text-xl font-medium tracking-[-0.02em] whitespace-nowrap"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
-      </Container>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Ask                                                                 */
-/* ------------------------------------------------------------------ */
-
-// From the demo church's Downtown runbook.
-const CHAT_STEPS = [
-  "Power on the rack, switch, then the SoundGrid server",
-  "Start the LV1 and load the Sunday show file",
-  "Open Ableton and play the click",
-  "Line check drums, bass and keys",
-  "Fresh batteries in every vocal pack",
-];
-
-function AskSection() {
-  return (
-    <section id="ask" className="scroll-mt-16 pt-28 md:pt-40">
-      <Container>
-        <SectionHeading
-          title={
-            <>
-              Troubleshoot in{" "}
-              <span className="font-serif font-normal italic">plain</span>{" "}
-              language
-            </>
-          }
-          body="Ask what you'd ask the production lead. ProdBot walks the campus wiring, follows the runbook, and tells you what isn't documented instead of guessing."
-          action={
-            <PillLink href={APP_URL}>
-              Ask a question
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </PillLink>
-          }
-        />
-
-        <div className="mt-12 grid gap-3 md:grid-cols-2">
-          <Reveal className="h-full">
-            <LiveChatCard />
-          </Reveal>
-          <Reveal delay={0.1} className="h-full">
-            <div className="bg-muted/80 group flex h-full min-h-[440px] flex-col overflow-hidden rounded-[22px]">
-              <div className="relative flex-1 overflow-hidden">
-                <div className="absolute top-8 left-8 w-[150%] transition-transform duration-700 group-hover:-translate-x-6 group-hover:-translate-y-2">
-                  <Shot
-                    src="/landing/ask.webp"
-                    alt="ProdBot's Ask screen for the Downtown campus"
-                  />
-                </div>
-              </div>
-              <div className="p-6 pt-5">
-                <div className="text-muted-foreground text-[13px]">
-                  One home per campus
-                </div>
-                <p className="mt-1 text-sm leading-relaxed">
-                  Pick your campus once. Every answer comes from that campus's
-                  approved documents, with the shared glossary and links on top.
-                </p>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <FeatureCard
-            icon={Wrench}
-            title="Troubleshoot"
-            body="Describe the symptom and get the first thing to check."
-          />
-          <FeatureCard
-            icon={ListChecks}
-            title="Sunday setup"
-            body="Step-by-step setup order from the campus documentation."
-            delay={0.06}
-          />
-          <FeatureCard
-            icon={Brain}
-            title="Shows its thinking"
-            body="A collapsible summary of how it reached the answer."
-            delay={0.12}
-          />
-          <FeatureCard
-            icon={ShieldCheck}
-            title="Only what's documented"
-            body="If it isn't in the docs, ProdBot says so rather than invent it."
-            delay={0.18}
-          />
-        </div>
-      </Container>
-    </section>
-  );
-}
-
-/** A replay of a real ProdBot answer, played when it scrolls into view. */
-function LiveChatCard() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, {
-    once: true,
-    margin: "-120px",
-    root: scrollContainer,
-  });
+/** Typing → sent → thinking → path → checks → source → hold, then next. */
+function AgentConsole() {
+  const reduce = useReducedMotion();
+  const [i, setI] = useState(0);
   const [stage, setStage] = useState(0);
+  const [typed, setTyped] = useState(0);
+  const s = SCENARIOS[i]!;
+
   useEffect(() => {
-    if (!inView) return;
-    const timers = [
-      setTimeout(() => setStage(1), 300),
-      setTimeout(() => setStage(2), 1200),
-      ...CHAT_STEPS.map((_, i) =>
-        setTimeout(() => setStage(3 + i), 2500 + i * 420),
-      ),
-    ];
+    if (reduce) {
+      setTyped(s.question.length);
+      setStage(99);
+      return;
+    }
+    setStage(0);
+    setTyped(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let t = 500;
+    for (let k = 1; k <= s.question.length; k++) {
+      timers.push(setTimeout(() => setTyped(k), t));
+      t += 34;
+    }
+    const at = (ms: number, st: number) =>
+      timers.push(setTimeout(() => setStage(st), ms));
+    at((t += 450), 1); // sent
+    at((t += 500), 2); // thinking
+    t += 1700;
+    s.path.forEach((_, k) => at(t + k * 260, 3 + k)); // path hops
+    t += s.path.length * 260 + 300;
+    const base = 3 + s.path.length;
+    s.checks.forEach((_, k) => at(t + k * 420, base + k)); // checks
+    t += s.checks.length * 420 + 300;
+    at(t, base + s.checks.length); // source
+    timers.push(
+      setTimeout(() => setI((x) => (x + 1) % SCENARIOS.length), t + 4200),
+    );
     return () => timers.forEach(clearTimeout);
-  }, [inView]);
+  }, [i, reduce, s]);
+
+  const hops = Math.max(0, Math.min(s.path.length, stage - 2));
+  const checks = Math.max(
+    0,
+    Math.min(s.checks.length, stage - 2 - s.path.length),
+  );
+  const done = stage >= 3 + s.path.length + s.checks.length;
 
   return (
-    <div
-      ref={ref}
-      className="relative flex h-full min-h-[440px] flex-col justify-end overflow-hidden rounded-[22px] bg-brand-deep bg-[radial-gradient(circle,oklch(1_0_0/9%)_1px,transparent_1.2px)] [background-size:22px_22px] text-white"
-    >
-      <div className="relative min-h-[260px] space-y-2.5 p-6 pb-2">
-        {stage >= 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-md bg-white px-3.5 py-2 text-[13px] text-black"
-          >
-            Walk me through the Sunday setup order.
-          </motion.div>
-        )}
+    <div className="border-border bg-card relative flex h-[500px] flex-col overflow-hidden rounded-[20px] border shadow-[0_1px_2px_oklch(0.2_0.01_210/5%),0_40px_80px_-40px_oklch(0.2_0.04_210/35%)]">
+      <div className="border-border flex items-center gap-2.5 border-b px-4 py-3">
+        <BrandMark size={20} active={stage >= 2 && !done} />
+        <span className="text-sm font-medium">ProdBot</span>
+        <span className="text-muted-foreground text-sm">Downtown</span>
+        <div className="flex-1" />
+        <div className="flex gap-1">
+          {SCENARIOS.map((_, k) => (
+            <span
+              key={k}
+              className={cn(
+                "h-1 rounded-full transition-all duration-500",
+                k === i ? "bg-foreground/70 w-5" : "bg-border w-1.5",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="relative flex-1 overflow-hidden px-4 py-5 md:px-5">
         <AnimatePresence mode="wait">
-          {stage === 2 && (
-            <motion.div
-              key="thinking"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2 text-[13px] text-white/70"
-            >
-              <BrandMark size={18} active className="bg-white text-black" />
-              Thinking…
-            </motion.div>
-          )}
-          {stage >= 3 && (
-            <motion.div
-              key="answer"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-fit max-w-[88%] rounded-2xl rounded-bl-md bg-white/12 px-4 py-3 text-[13px] backdrop-blur-md"
-            >
-              <div className="mb-2 flex items-center gap-1.5 text-[11px] text-white/60">
-                <Sparkles className="size-3" /> Worked for 6s · Downtown
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            className="space-y-4"
+          >
+            {stage >= 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-secondary ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-[14px]"
+              >
+                {s.question}
+              </motion.div>
+            )}
+
+            {stage >= 2 && (
+              <div className="flex gap-3">
+                <BrandMark size={20} className="mt-0.5" />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <ThinkingTrace steps={s.trace} collapsed={hops > 0} />
+
+                  {hops > 0 && (
+                    <div className="flex flex-wrap items-center gap-y-1.5">
+                      {s.path.slice(0, hops).map((p, k) => (
+                        <motion.span
+                          key={p}
+                          initial={{ opacity: 0, x: -4 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex items-center"
+                        >
+                          {k > 0 && (
+                            <span className="bg-border mx-1 h-px w-3" />
+                          )}
+                          <span
+                            className={cn(
+                              "rounded-md border px-1.5 py-0.5 text-[12px] whitespace-nowrap",
+                              k === hops - 1 && !done && checks === 0
+                                ? "border-primary/50 text-foreground"
+                                : "border-border text-foreground/80",
+                            )}
+                          >
+                            {p}
+                          </span>
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
+
+                  {checks > 0 && (
+                    <ol className="space-y-2 pt-1">
+                      {s.checks.slice(0, checks).map((c, k) => (
+                        <motion.li
+                          key={c}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex gap-2.5 text-[14px] leading-snug"
+                        >
+                          <span className="border-border text-muted-foreground mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px] tabular-nums">
+                            {k + 1}
+                          </span>
+                          {c}
+                        </motion.li>
+                      ))}
+                    </ol>
+                  )}
+
+                  {done && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-wrap gap-2 pt-1"
+                    >
+                      {s.sources.map((src) => (
+                        <span
+                          key={src.title}
+                          className="border-border bg-background flex items-center gap-2 rounded-lg border px-2 py-1"
+                        >
+                          <BookOpen className="text-muted-foreground size-3" />
+                          <span className="text-muted-foreground text-[11px]">
+                            {src.kind}
+                          </span>
+                          <span className="text-[12px]">{src.title}</span>
+                        </span>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
               </div>
-              <ol className="space-y-1">
-                {CHAT_STEPS.map((s, i) => (
-                  <motion.li
-                    key={s}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={
-                      stage >= 3 + i
-                        ? { opacity: 1, x: 0 }
-                        : { opacity: 0, x: -6 }
-                    }
-                    transition={{ duration: 0.4 }}
-                    className="flex gap-2"
-                  >
-                    <span className="text-white/50 tabular-nums">{i + 1}.</span>
-                    {s}
-                  </motion.li>
-                ))}
-              </ol>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
         </AnimatePresence>
       </div>
-      <div className="relative p-6 pt-4">
-        <div className="text-[13px] text-white/60">Grounded answers</div>
-        <p className="mt-1 text-sm leading-relaxed text-white/90">
-          The Sunday setup order straight from the campus runbook, with the
-          pitfall to open if a step goes wrong.
-        </p>
+
+      <div className="px-4 pb-4">
+        <div className="border-border flex items-center gap-3 rounded-2xl border py-2 pr-2 pl-4">
+          <span className="min-w-0 flex-1 truncate text-[14px]">
+            {stage === 0 ? (
+              <>
+                {s.question.slice(0, typed)}
+                <span className="bg-foreground/60 ml-px inline-block h-4 w-px translate-y-0.5 animate-pulse" />
+              </>
+            ) : (
+              <span className="text-muted-foreground">Message ProdBot</span>
+            )}
+          </span>
+          <span
+            className={cn(
+              "inline-flex size-8 items-center justify-center rounded-full transition-colors",
+              stage === 0 && typed === s.question.length
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            <ArrowUp className="size-4" />
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Explore                                                             */
-/* ------------------------------------------------------------------ */
-
-function ExploreSection() {
+/**
+ * Beautiful UI-style thinking trace: steps tick off one by one, then the
+ * trace collapses to a single "Thought for…" line once the answer starts.
+ */
+function ThinkingTrace({
+  steps,
+  collapsed,
+}: {
+  steps: string[];
+  collapsed: boolean;
+}) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    setN(0);
+    const timers = steps.map((_, k) =>
+      setTimeout(() => setN(k + 1), 380 + k * 480),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [steps]);
+  if (collapsed)
+    return (
+      <div className="text-muted-foreground flex items-center gap-1 text-[12px]">
+        Thought for 2s · {steps.length} steps
+        <ChevronRight className="size-3" />
+      </div>
+    );
   return (
-    <section id="explore" className="scroll-mt-16 pt-28 md:pt-40">
-      <Container>
-        <SectionHeading
-          title={
-            <>
-              See the whole signal chain,{" "}
-              <span className="font-serif font-normal italic">
-                then zoom in
-              </span>
-            </>
-          }
-          body="Every campus's wiring as an interactive diagram. Hover a device for its connections, click to focus, and export a PNG for the booth."
-          action={
-            <PillLink href={APP_URL} variant="light">
-              Explore a campus
-            </PillLink>
-          }
-        />
-        <Reveal className="mt-12">
-          <ZoomShowcase />
-        </Reveal>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <FeatureCard
-            icon={Search}
-            title="Search devices"
-            body="Find any device by name, id or model across the campus."
-          />
-          <FeatureCard
-            icon={MousePointerClick}
-            title="Focus a device"
-            body="See exactly what feeds it and where its signal goes next."
-            delay={0.06}
-          />
-          <FeatureCard
-            icon={Download}
-            title="Export"
-            body="Save the diagram as a PNG to print or share with the team."
-            delay={0.12}
-          />
-        </div>
-      </Container>
-    </section>
+    <div className="space-y-1.5">
+      <ShimmeringText
+        text="Thinking"
+        className="text-[13px]"
+        startOnView={false}
+      />
+      {steps.slice(0, n + 1).map((step, k) => (
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: -4 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-muted-foreground flex items-center gap-2 text-[12px]"
+        >
+          {k < n ? (
+            <Check className="text-primary size-3" strokeWidth={3} />
+          ) : (
+            <span className="border-muted-foreground/40 border-t-foreground size-3 animate-spin rounded-full border" />
+          )}
+          {step}
+        </motion.div>
+      ))}
+    </div>
   );
 }
 
-/** Scroll-driven: the overview diagram crossfades into a focused device. */
-function ZoomShowcase() {
+/* ------------------------------------------------------------------ */
+/* A Sunday, minute by minute                                         */
+/* ------------------------------------------------------------------ */
+
+type Moment = {
+  time: string;
+  minute: number;
+  feature: string;
+  title: string;
+  body: string;
+  visual: ReactNode;
+};
+
+const MOMENTS: Moment[] = [
+  {
+    time: "7:00",
+    minute: 7 * 60,
+    feature: "Runbook",
+    title: "Power on, in the right order",
+    body: "Today's checklist comes from the campus runbook. Each step says who owns it, what done looks like, and which pitfall to open if it isn't.",
+    visual: <RunbookVisual />,
+  },
+  {
+    time: "7:12",
+    minute: 7 * 60 + 12,
+    feature: "Ask",
+    title: "Something goes quiet",
+    body: "A volunteer asks in their own words. ProdBot walks the documented signal chain and answers with the checks to run, closest to the problem first.",
+    visual: (
+      <Shot
+        src="/landing/chat.webp"
+        alt="ProdBot answering why the drummer has no click"
+      />
+    ),
+  },
+  {
+    time: "7:31",
+    minute: 7 * 60 + 31,
+    feature: "Explore",
+    title: "Where does that cable go?",
+    body: "Every device and connection on one diagram. Click one to see what feeds it, where its signal goes next, and the pitfalls that have hit it before.",
+    visual: (
+      <Shot
+        src="/landing/explore-focus.webp"
+        alt="The Downtown wiring diagram with the SoundGrid server in focus"
+      />
+    ),
+  },
+  {
+    time: "8:05",
+    minute: 8 * 60 + 5,
+    feature: "Pitfalls",
+    title: "It's happened before",
+    body: "Problems are written down symptom-first, the way someone describes them on a Sunday, with what was actually wrong and what fixed it.",
+    visual: <PitfallVisual />,
+  },
+  {
+    time: "10:40",
+    minute: 10 * 60 + 40,
+    feature: "Admin",
+    title: "After service, write it down",
+    body: "A volunteer reports what fixed it. An admin approves it in one click and the pitfall's last-seen date updates for next week's team.",
+    visual: <FixVisual />,
+  },
+];
+
+function Sunday() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     container: scrollContainer,
-    offset: ["start end", "center center"],
+    offset: ["start 60%", "end 60%"],
   });
-  const focusOpacity = useTransform(scrollYProgress, [0.6, 0.9], [0, 1]);
-  const zoom = useTransform(scrollYProgress, [0, 1], [1.08, 1]);
+  const [active, setActive] = useState(0);
+  const rail = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+  const m = MOMENTS[active]!;
+
+  return (
+    <section id="sunday" className="border-border scroll-mt-16 border-t">
+      <Container className="pt-24 md:pt-32">
+        <Reveal>
+          <h2 className="max-w-3xl text-[36px] leading-[1.02] font-medium tracking-[-0.04em] md:text-[56px]">
+            A Sunday, minute by minute.
+          </h2>
+          <p className="text-muted-foreground mt-5 max-w-xl text-[17px] leading-relaxed">
+            Every church runs the same morning a little differently. ProdBot
+            learns yours, campus by campus, and shows up at the moments that
+            usually go wrong.
+          </p>
+        </Reveal>
+
+        <div
+          ref={ref}
+          className="mt-16 grid gap-10 pb-24 lg:grid-cols-[260px_1fr] lg:gap-16"
+        >
+          {/* Sticky clock */}
+          <div className="hidden lg:block">
+            <div className="sticky top-28">
+              <div className="text-[88px] leading-none font-medium tracking-[-0.05em] tabular-nums">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={m.time}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -18 }}
+                    transition={{ duration: 0.35, ease: EASE }}
+                    className="inline-block"
+                  >
+                    {m.time}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              <div className="text-muted-foreground mt-3 text-sm">
+                {m.minute >= 10 * 60 ? "After service" : "AM"} ·{" "}
+                <span className="text-foreground">{m.feature}</span>
+              </div>
+              <div className="bg-border relative mt-8 h-48 w-px">
+                <motion.div
+                  className="bg-primary absolute inset-x-0 top-0"
+                  style={{ height: rail }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Moments */}
+          <div className="space-y-24 md:space-y-32">
+            {MOMENTS.map((mo, k) => (
+              <MomentRow key={mo.time} onActive={() => setActive(k)}>
+                <Reveal>
+                  <div className="text-muted-foreground flex items-baseline gap-3 text-sm tabular-nums">
+                    <span className="text-foreground lg:hidden">{mo.time}</span>
+                    {mo.feature}
+                  </div>
+                  <h3 className="mt-2 text-[26px] leading-tight font-medium tracking-[-0.03em] md:text-[30px]">
+                    {mo.title}
+                  </h3>
+                  <p className="text-muted-foreground mt-3 text-[16px] leading-relaxed">
+                    {mo.body}
+                  </p>
+                </Reveal>
+                <Reveal delay={0.1}>{mo.visual}</Reveal>
+              </MomentRow>
+            ))}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/** A timeline row that marks itself active when it crosses mid-screen. */
+function MomentRow({
+  children,
+  onActive,
+}: {
+  children: ReactNode;
+  onActive: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, {
+    root: scrollContainer,
+    margin: "-40% 0px -50% 0px",
+  });
+  useEffect(() => {
+    if (inView) onActive();
+  }, [inView, onActive]);
   return (
     <div
       ref={ref}
-      className="bg-muted/80 relative overflow-hidden rounded-[28px] p-3 md:p-10"
+      className="grid gap-8 md:grid-cols-[1fr_1.35fr] md:items-center"
     >
-      <motion.div style={{ scale: zoom }} className="relative">
-        <Shot
-          src="/landing/explore.webp"
-          alt="Downtown wiring overview in ProdBot Explore"
-        />
-        <motion.div
-          style={{ opacity: focusOpacity }}
-          className="absolute inset-0"
-        >
-          <Shot
-            src="/landing/explore-focus.webp"
-            alt="A focused device showing its inputs and outputs"
-          />
-        </motion.div>
-      </motion.div>
+      {children}
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Admin                                                               */
-/* ------------------------------------------------------------------ */
+/* ---- Moment visuals (drawn from the demo church) ------------------- */
 
-const ADMIN_STEPS = [
-  {
-    icon: MessageSquare,
-    title: "Describe it",
-    body: "Tell ProdBot what plugs into what, or paste notes from the booth.",
-  },
-  {
-    icon: Network,
-    title: "AI drafts it",
-    body: "It draws the wiring and writes pitfalls symptom-first, as a draft.",
-  },
-  {
-    icon: FileCheck2,
-    title: "You approve it",
-    body: "Nothing reaches volunteers until an admin approves the draft.",
-  },
-];
-
-function AdminSection() {
+function VisualCard({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section id="admin" className="scroll-mt-16 pt-28 md:pt-40">
-      <Container>
-        <SectionHeading
-          title={
-            <>
-              Documentation that stays a{" "}
-              <span className="font-serif font-normal italic">draft</span> until
-              it's right
-            </>
-          }
-          body="Production leads keep each campus current: wiring, common pitfalls, documentation links and terminology, with every revision kept."
-        />
-        <Reveal className="mt-12">
-          <div className="bg-brand-soft overflow-hidden rounded-[28px] p-2 md:p-4">
-            <Shot
-              src="/landing/admin.webp"
-              alt="ProdBot Admin overview: stats, items waiting for review, recent pitfalls"
-              className="rounded-[18px]"
-            />
-          </div>
-        </Reveal>
-        <Reveal delay={0.1} className="mt-3">
-          <div className="border-border bg-card grid overflow-hidden rounded-2xl border sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ...ADMIN_STEPS,
-              {
-                icon: History,
-                title: "Nothing is lost",
-                body: "Every revision is kept, and stale drafts are flagged.",
-              },
-            ].map((s, i) => (
-              <div
-                key={s.title}
+    <div
+      className={cn(
+        "border-border bg-card rounded-2xl border p-5 shadow-[0_1px_2px_oklch(0.2_0.01_210/5%),0_24px_48px_-30px_oklch(0.2_0.03_210/30%)] md:p-6",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function RunbookVisual() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, root: scrollContainer });
+  const steps = [
+    [
+      "7:00",
+      "Rack conditioner, switch, then SoundGrid server",
+      "Production lead",
+    ],
+    ["7:05", "Start the LV1 and load the Sunday show", "A1"],
+    ["7:15", "Open Ableton and play the click", "Playback"],
+    ["7:20", "Line check drums, bass and keys", "A1"],
+  ];
+  return (
+    <VisualCard>
+      <div ref={ref} className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <ListChecks className="size-4" /> Downtown runbook
+        </div>
+        <span className="text-muted-foreground text-xs">Today</span>
+      </div>
+      <ul className="divide-border mt-4 divide-y">
+        {steps.map(([time, step, owner], k) => {
+          const checked = inView && k < 3;
+          return (
+            <li key={step} className="flex items-center gap-3 py-3">
+              <motion.span
+                initial={false}
+                animate={{
+                  backgroundColor: checked ? "var(--primary)" : "rgba(0,0,0,0)",
+                  borderColor: checked ? "var(--primary)" : "var(--border)",
+                }}
+                transition={{ delay: 0.3 + k * 0.45, duration: 0.25 }}
+                className="text-primary-foreground inline-flex size-5 shrink-0 items-center justify-center rounded-md border"
+              >
+                {checked && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.35 + k * 0.45 }}
+                  >
+                    <Check className="size-3.5" strokeWidth={3} />
+                  </motion.span>
+                )}
+              </motion.span>
+              <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
+                {time}
+              </span>
+              <span
                 className={cn(
-                  "border-border p-5",
-                  i > 0 && "border-t sm:border-t-0",
-                  i % 2 === 1 && "sm:border-l",
-                  i >= 2 && "sm:border-t lg:border-t-0",
-                  i > 0 && "lg:border-l",
+                  "min-w-0 flex-1 text-[14px]",
+                  checked && "text-muted-foreground",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    0{i + 1}
-                  </span>
-                  <s.icon className="text-primary size-4" />
+                {step}
+              </span>
+              <span className="text-muted-foreground hidden text-xs sm:inline">
+                {owner}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </VisualCard>
+  );
+}
+
+function PitfallVisual() {
+  return (
+    <VisualCard>
+      <div className="flex items-start gap-3">
+        <span className="border-border inline-flex size-9 shrink-0 items-center justify-center rounded-xl border">
+          <TriangleAlert className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-muted-foreground font-mono text-xs">P-004</div>
+          <div className="text-[16px] font-medium">
+            Lead vocal drops out during worship
+          </div>
+        </div>
+      </div>
+      <dl className="mt-5 space-y-3 text-[14px]">
+        <div>
+          <dt className="text-muted-foreground text-xs">
+            What's actually wrong
+          </dt>
+          <dd className="mt-0.5">
+            Low pack battery, or the frequency collides with a TV station on 584
+            MHz.
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">Check</dt>
+          <dd className="mt-0.5">
+            Battery bars on the pack, then the receiver's RF meter near the
+            stage edge.
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">Fix</dt>
+          <dd className="mt-0.5">
+            Fresh batteries every service. Still dropping? Rescan and deploy a
+            new group.
+          </dd>
+        </div>
+      </dl>
+      <div className="border-border text-muted-foreground mt-5 flex flex-wrap items-center gap-2 border-t pt-4 text-xs">
+        <span className="border-border rounded-md border px-1.5 py-0.5">
+          Vocal wireless receiver
+        </span>
+        <span className="border-border rounded-md border px-1.5 py-0.5">
+          Rack IOX
+        </span>
+        <span className="ml-auto">Last seen Sep 7</span>
+      </div>
+    </VisualCard>
+  );
+}
+
+function FixVisual() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, root: scrollContainer });
+  const [approved, setApproved] = useState(false);
+  useEffect(() => {
+    if (!inView) return;
+    const t = setTimeout(() => setApproved(true), 1800);
+    return () => clearTimeout(t);
+  }, [inView]);
+  return (
+    <VisualCard>
+      <div ref={ref} className="text-muted-foreground text-xs">
+        Reported fix · P-001
+      </div>
+      <blockquote className="mt-3 text-[15px] leading-relaxed">
+        “P-001 happened again at 9am. Re-assigning the server in Inventory and
+        setting the clock to the Extreme fixed it.”
+      </blockquote>
+      <div className="text-muted-foreground mt-2 text-xs">
+        Volunteer, Downtown, 9:04 AM
+      </div>
+      <div className="border-border mt-5 flex items-center gap-3 border-t pt-4">
+        <AnimatePresence mode="wait" initial={false}>
+          {approved ? (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-sm"
+            >
+              <span className="bg-primary text-primary-foreground inline-flex size-5 items-center justify-center rounded-full">
+                <Check className="size-3" strokeWidth={3} />
+              </span>
+              Approved · P-001 last seen today
+            </motion.div>
+          ) : (
+            <motion.div
+              key="ask"
+              exit={{ opacity: 0, y: -6 }}
+              className="flex w-full items-center gap-2"
+            >
+              <span className="text-muted-foreground flex-1 text-sm">
+                Add this to P-001?
+              </span>
+              <span className="border-border rounded-full border px-3 py-1 text-sm">
+                Reject
+              </span>
+              <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 text-sm">
+                Approve
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </VisualCard>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sources: what it knows, your team wrote                            */
+/* ------------------------------------------------------------------ */
+
+const INPUTS = [
+  {
+    icon: NotebookPen,
+    label: "Booth notes",
+    detail: "“Rescanned the ULXD, moved to group 4…”",
+  },
+  {
+    icon: FileText,
+    label: "Manuals and PDFs",
+    detail: "Rack drawings, console docs",
+  },
+  {
+    icon: MessageSquareText,
+    label: "A description",
+    detail: "“Drums are on stage box A…”",
+  },
+];
+const OUTPUTS = [
+  { icon: Network, label: "Wiring diagram" },
+  { icon: TriangleAlert, label: "Pitfalls" },
+  { icon: ListChecks, label: "Runbook" },
+  { icon: BookOpen, label: "Glossary" },
+];
+
+function Sources() {
+  return (
+    <section className="bg-brand-deep text-white">
+      <Container className="py-24 md:py-32">
+        <Reveal>
+          <h2 className="max-w-3xl text-[36px] leading-[1.02] font-medium tracking-[-0.04em] md:text-[56px]">
+            It only knows what your team wrote down.
+          </h2>
+          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-white/65">
+            Give it notes, PDFs or a plain description. The AI drafts the
+            documents, an admin approves them, and nothing reaches a volunteer
+            before that. If it isn't documented, ProdBot says so.
+          </p>
+        </Reveal>
+
+        <div className="mt-16 grid items-center gap-6 md:grid-cols-[1fr_auto_1fr] md:gap-10">
+          <div className="space-y-3">
+            {INPUTS.map((x, k) => (
+              <Reveal key={x.label} delay={k * 0.09}>
+                <div className="flex items-start gap-3 rounded-2xl border border-white/12 bg-white/[0.04] p-4">
+                  <x.icon className="mt-0.5 size-4 shrink-0 text-white/70" />
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-medium">{x.label}</div>
+                    <div className="truncate text-[13px] text-white/50">
+                      {x.detail}
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-6 text-[15px] font-medium">{s.title}</div>
-                <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                  {s.body}
-                </p>
-              </div>
+              </Reveal>
             ))}
+          </div>
+
+          <Reveal delay={0.2} className="flex flex-col items-center gap-3 py-4">
+            <Flow />
+            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] py-1.5 pr-4 pl-1.5 text-sm">
+              <BrandMark size={24} className="bg-white text-black" />
+              Draft, then approve
+            </div>
+            <Flow />
+          </Reveal>
+
+          <div className="grid grid-cols-2 gap-3">
+            {OUTPUTS.map((x, k) => (
+              <Reveal key={x.label} delay={0.27 + k * 0.09}>
+                <div className="flex h-full flex-col justify-between gap-6 rounded-2xl bg-white p-4 text-black">
+                  <x.icon className="size-4" />
+                  <div className="text-[15px] font-medium">{x.label}</div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/** A short vertical (desktop: horizontal) dashed line with moving signal. */
+function Flow() {
+  return (
+    <svg viewBox="0 0 2 40" className="h-10 w-0.5 text-white/40" aria-hidden>
+      <line
+        x1="1"
+        y1="0"
+        x2="1"
+        y2="40"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray="3 4"
+        className="animate-[dash_1.2s_linear_infinite]"
+      />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Watch                                                               */
+/* ------------------------------------------------------------------ */
+
+/** Chapters of public/landing/preview.mp4 (a recording of the demo church). */
+const CHAPTERS = [
+  { start: 0, title: "Ask a question" },
+  { start: 11.9, title: "Explore the wiring" },
+  { start: 19.5, title: "Review in Admin" },
+];
+
+function Watch() {
+  const video = useRef<HTMLVideoElement>(null);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(31);
+  const active = CHAPTERS.reduce((a, c, i) => (time >= c.start ? i : a), 0);
+  const end = (i: number) => CHAPTERS[i + 1]?.start ?? duration;
+  return (
+    <section id="watch" className="scroll-mt-16">
+      <Container className="py-24 md:py-32">
+        <Reveal className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="text-[36px] leading-[1.02] font-medium tracking-[-0.04em] md:text-[56px]">
+            Watch a Sunday in 30 seconds.
+          </h2>
+          <span className="text-muted-foreground text-sm">
+            Recorded in the demo church
+          </span>
+        </Reveal>
+        <Reveal delay={0.1} className="mt-10">
+          <div className="border-border bg-card overflow-hidden rounded-[20px] border shadow-[0_40px_80px_-40px_oklch(0.2_0.04_210/35%)]">
+            <video
+              ref={video}
+              src="/landing/preview.mp4"
+              poster="/landing/preview-poster.webp"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="ProdBot walkthrough: asking a question, exploring the wiring diagram and reviewing in Admin"
+              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+              className="block aspect-[16/10] h-auto w-full"
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3 md:gap-6">
+            {CHAPTERS.map((c, i) => {
+              const on = i === active;
+              const p = on
+                ? Math.min(1, (time - c.start) / (end(i) - c.start))
+                : i < active
+                  ? 1
+                  : 0;
+              return (
+                <button
+                  key={c.title}
+                  onClick={() => {
+                    const v = video.current;
+                    if (!v) return;
+                    v.currentTime = c.start + 0.05;
+                    void v.play().catch(() => {});
+                  }}
+                  className="group text-left"
+                >
+                  <span className="bg-border relative block h-[2px] overflow-hidden rounded-full">
+                    <span
+                      className="bg-foreground absolute inset-y-0 left-0 block"
+                      style={{ width: `${p * 100}%` }}
+                    />
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-3 block text-sm transition-colors",
+                      on
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  >
+                    {c.title}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </Reveal>
       </Container>
@@ -844,43 +1264,26 @@ function AdminSection() {
 /* Closing                                                             */
 /* ------------------------------------------------------------------ */
 
-function ClosingCta() {
+function Closing() {
   return (
-    <section className="pt-28 pb-24 md:pt-40">
-      <Container>
-        <div className="relative overflow-hidden rounded-[32px] bg-brand-deep px-6 py-20 text-center text-white md:py-28">
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center text-white/[0.07]">
-            <CanvasIllustration
-              id="wiring"
-              mini
-              className="w-[min(900px,140%)] max-w-none"
-            />
+    <section className="border-border border-t">
+      <Container className="py-24 md:py-36">
+        <Reveal className="flex flex-col items-start gap-10 md:flex-row md:items-end md:justify-between">
+          <h2 className="text-[56px] leading-[0.95] font-medium tracking-[-0.05em] md:text-[104px]">
+            See you
+            <br />
+            Sunday.
+          </h2>
+          <div className="flex flex-col items-start gap-4 md:items-end">
+            <PrimaryButton href={DEMO_URL}>Try the demo</PrimaryButton>
+            <a
+              href={APP_URL}
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Or sign in to your church
+            </a>
           </div>
-          <div className="relative">
-            <Reveal>
-              <h2 className="mx-auto max-w-2xl text-[38px] leading-[1.05] font-medium tracking-[-0.04em] md:text-[56px]">
-                Ready before{" "}
-                <span className="font-serif font-normal italic">Sunday</span>{" "}
-                starts
-              </h2>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-white/70">
-                Document the wiring once, keep the fixes current, and give every
-                volunteer someone to ask.
-              </p>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <a
-                href={APP_URL}
-                className="group mt-10 inline-flex h-11 items-center gap-2 rounded-full bg-white px-6 text-sm font-medium text-black transition-shadow hover:shadow-[0_10px_40px_-8px_oklch(1_0_0/50%)]"
-              >
-                Open ProdBot
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </a>
-            </Reveal>
-          </div>
-        </div>
+        </Reveal>
       </Container>
     </section>
   );
@@ -889,27 +1292,12 @@ function ClosingCta() {
 function Footer() {
   return (
     <footer className="border-border border-t">
-      <Container className="text-muted-foreground flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center">
+      <Container className="text-muted-foreground flex flex-col gap-3 py-8 text-sm sm:flex-row sm:items-center">
         <div className="text-foreground flex items-center gap-2">
           <BrandMark size={18} />
           <span className="font-medium">ProdBot</span>
         </div>
         <span>The production assistant for church tech teams.</span>
-        <div className="flex-1" />
-        <div className="flex gap-5">
-          <a
-            href={APP_URL}
-            className="hover:text-foreground flex items-center gap-1.5"
-          >
-            <ArrowRight className="size-3.5" /> Open ProdBot
-          </a>
-          <a
-            href="#ask"
-            className="hover:text-foreground flex items-center gap-1.5"
-          >
-            <BookOpen className="size-3.5" /> Features
-          </a>
-        </div>
       </Container>
     </footer>
   );

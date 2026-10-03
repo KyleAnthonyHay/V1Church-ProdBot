@@ -133,10 +133,7 @@ export function AskView({
             )}
           </div>
           <h1 className="text-center text-4xl font-medium tracking-[-0.035em] md:text-5xl">
-            What can I do for{" "}
-            <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
-              you?
-            </span>
+            What can I do for you?
           </h1>
           <Composer
             {...composerProps}

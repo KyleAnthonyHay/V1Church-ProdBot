@@ -80,21 +80,7 @@ export function SignIn() {
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
           <h1 className="text-3xl font-medium tracking-[-0.035em]">
-            {flow === "signIn" ? (
-              <>
-                Welcome{" "}
-                <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
-                  back
-                </span>
-              </>
-            ) : (
-              <>
-                Set up your{" "}
-                <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
-                  church
-                </span>
-              </>
-            )}
+            {flow === "signIn" ? <>Welcome back</> : <>Set up your church</>}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             {flow === "signIn"

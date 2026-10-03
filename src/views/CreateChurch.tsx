@@ -56,10 +56,7 @@ export function CreateChurch({ email }: { email: string | null }) {
         className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-16"
       >
         <h1 className="text-3xl font-medium tracking-[-0.035em]">
-          Add your{" "}
-          <span className="font-serif text-[1.12em] font-normal tracking-normal italic">
-            church
-          </span>
+          Add your church
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">
           Each campus gets its own wiring, pitfalls and runbook. You can add
