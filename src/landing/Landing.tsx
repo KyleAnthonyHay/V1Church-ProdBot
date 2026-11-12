@@ -213,12 +213,6 @@ function Nav() {
         >
           Sign in
         </a>
-        <a
-          href={DEMO_URL}
-          className="border-border hover:border-foreground/30 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors"
-        >
-          Try the demo
-        </a>
       </Container>
     </header>
   );
@@ -250,20 +244,7 @@ function Hero() {
   return (
     <section className="relative">
       <Container className="pt-10 pb-16 md:pt-16 md:pb-20">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-1 text-[13px] tabular-nums"
-        >
-          <span className="text-foreground font-medium">
-            Sunday {clock.label} AM
-          </span>
-          <span>Doors 8:00</span>
-          <span>Service 9:00</span>
-        </motion.div>
-
-        <div className="mt-8 grid gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+        <div className="grid gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 24 }}
