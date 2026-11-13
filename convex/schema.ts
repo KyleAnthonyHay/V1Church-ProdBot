@@ -16,6 +16,13 @@ export const sourceKindValidator = v.union(
   v.literal("pdf"),
 );
 
+// Which admin category a note was added under. Generation still reads every
+// ready note for the campus; the topic only organises the admin view.
+export const sourceTopicValidator = v.union(
+  v.literal("wiring"),
+  v.literal("pitfalls"),
+);
+
 export default defineSchema({
   campuses: defineTable({
     slug: v.string(),
@@ -28,6 +35,7 @@ export default defineSchema({
     campusId: v.optional(v.id("campuses")),
     title: v.string(),
     kind: sourceKindValidator,
+    topic: v.optional(sourceTopicValidator),
     storageId: v.optional(v.id("_storage")),
     text: v.optional(v.string()),
     status: v.union(
@@ -101,6 +109,8 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    // Streamed reasoning summary from the model (assistant messages only).
+    reasoning: v.optional(v.string()),
     status: v.union(
       v.literal("streaming"),
       v.literal("done"),

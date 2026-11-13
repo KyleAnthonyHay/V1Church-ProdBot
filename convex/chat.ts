@@ -137,13 +137,19 @@ export const updateAssistant = internalMutation({
   args: {
     id: v.id("messages"),
     content: v.string(),
+    reasoning: v.optional(v.string()),
     status: v.union(
       v.literal("streaming"),
       v.literal("done"),
       v.literal("error"),
     ),
   },
-  handler: async (ctx, { id, content, status }) => {
-    if (await ctx.db.get(id)) await ctx.db.patch(id, { content, status });
+  handler: async (ctx, { id, content, reasoning, status }) => {
+    if (await ctx.db.get(id))
+      await ctx.db.patch(id, {
+        content,
+        status,
+        ...(reasoning !== undefined ? { reasoning } : {}),
+      });
   },
 });

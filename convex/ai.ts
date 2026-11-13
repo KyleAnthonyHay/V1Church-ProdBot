@@ -7,9 +7,12 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { docKindValidator } from "./schema";
 import { buildAgentSystemPrompt, buildGenerationPrompt } from "./lib/prompt";
+import { extractTextFromBlob } from "./lib/extractText";
 import {
   aiWiringSchema,
+  mergeInternalWiring,
   normalizeAiGraph,
+  parseWiringYaml,
   validateGraph,
   wiringToYaml,
 } from "../shared/wiring";
@@ -72,11 +75,13 @@ export const answer = internalAction({
   },
   handler: async (ctx, { conversationId, assistantMessageId }) => {
     let text = "";
+    let reasoning = "";
     let lastFlush = 0;
     const flush = (status: "streaming" | "done" | "error") =>
       ctx.runMutation(internal.chat.updateAssistant, {
         id: assistantMessageId,
         content: text,
+        reasoning,
         status,
       });
 
@@ -106,7 +111,7 @@ export const answer = internalAction({
         model: MODEL,
         max_output_tokens: 8000,
         store: false,
-        reasoning: { effort: effort("AGENT_EFFORT", "medium") },
+        reasoning: { effort: effort("AGENT_EFFORT", "medium"), summary: "auto" },
         instructions: system,
         input: history.map((m) => ({ role: m.role, content: m.content })),
         tools: [
@@ -134,10 +139,16 @@ export const answer = internalAction({
           event.type === "response.refusal.delta"
         ) {
           text += event.delta;
-          if (Date.now() - lastFlush > 250) {
-            lastFlush = Date.now();
-            await flush("streaming");
-          }
+        } else if (event.type === "response.reasoning_summary_text.delta") {
+          reasoning += event.delta;
+        } else if (event.type === "response.reasoning_summary_part.done") {
+          reasoning += "\n\n";
+        } else {
+          continue;
+        }
+        if (Date.now() - lastFlush > 250) {
+          lastFlush = Date.now();
+          await flush("streaming");
         }
       }
       const final = await stream.finalResponse();
@@ -172,6 +183,167 @@ export const answer = internalAction({
   },
 });
 
+/**
+ * Diagram workspace chat: redraw the wiring from a plain-language message.
+ * With `parentNodeId` it produces the complete internal wiring of that one
+ * device; without it, an updated version of the whole campus graph. The
+ * result goes back to the canvas; nothing is saved until the admin clicks Save.
+ */
+export const draftWiring = action({
+  args: {
+    campusId: v.optional(v.id("campuses")),
+    /** Scope the redraw to this device's internal wiring. */
+    parentNodeId: v.optional(v.string()),
+    description: v.string(),
+    /** The canvas as it is now (may include unsaved work). */
+    currentYaml: v.string(),
+  },
+  handler: async (ctx, { campusId, parentNodeId, description, currentYaml }) => {
+    const text = description.trim();
+    if (!text) throw new Error("Describe the wiring first.");
+    if (text.length > 20_000) throw new Error("Description is too long.");
+    const current = parseWiringYaml(currentYaml);
+    const graph = current.graph ?? { nodes: [], edges: [] };
+    if (!current.graph && currentYaml.trim())
+      throw new Error("The canvas is not a valid wiring graph.");
+    const parent = parentNodeId
+      ? graph.nodes.find((n) => n.id === parentNodeId)
+      : undefined;
+    if (parentNodeId && !parent)
+      throw new Error("That device is not on the canvas.");
+    const campus = campusId
+      ? await ctx.runQuery(api.campuses.list).then((all) =>
+          all.find((c) => c._id === campusId),
+        )
+      : undefined;
+    const title = parent ? `Inside ${parent.label}` : "Diagram chat";
+    // Keep the description on file with the other wiring notes, so pitfall
+    // and runbook drafts can draw on it later.
+    await ctx.runMutation(api.sources.createPaste, {
+      campusId,
+      title,
+      text,
+      topic: "wiring",
+    });
+    const { system, user } = buildGenerationPrompt({
+      kind: "wiring",
+      campusName: campus?.name ?? null,
+      sources: [{ title, text }],
+      current: currentYaml,
+      ...(parent ? { parentNode: { id: parent.id, label: parent.label } } : {}),
+    });
+    return await drawWiring(
+      system,
+      user,
+      parent ? "draft_internal_wiring" : "draft_wiring",
+    );
+  },
+});
+
+/** One structured-output call that returns a normalized graph plus assumptions. */
+async function drawWiring(system: string, user: string, operation: string) {
+  assertContextBudget(system, user);
+  const response = await client().responses.parse({
+    model: MODEL,
+    max_output_tokens: 16000,
+    store: false,
+    reasoning: { effort: effort("GENERATE_EFFORT", "high") },
+    instructions: system,
+    input: [{ role: "user", content: user }],
+    text: { format: zodTextFormat(aiWiringSchema, "wiring_graph") },
+  });
+  requireCompleted(response);
+  logUsage(response, operation);
+  if (!response.output_parsed)
+    throw new Error("The model did not return a valid wiring graph. Try again.");
+  return {
+    graph: normalizeAiGraph(response.output_parsed),
+    assumptions: response.output_parsed.assumptions,
+  };
+}
+
+/**
+ * Admin "New schema": draw the campus wiring from scratch out of a typed
+ * description and/or uploaded .txt/.pdf files, ignoring the current diagram.
+ * The files are extracted here (not via the scheduler) so the result comes
+ * back in the same call; description and files are kept as wiring notes.
+ * Like the diagram chat, nothing is saved until the admin clicks Save.
+ */
+export const newWiringSchema = action({
+  args: {
+    campusId: v.optional(v.id("campuses")),
+    description: v.optional(v.string()),
+    uploads: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          title: v.string(),
+          kind: v.union(v.literal("txt"), v.literal("pdf")),
+        }),
+      ),
+    ),
+  },
+  handler: async (ctx, { campusId, description, uploads = [] }) => {
+    const text = description?.trim() ?? "";
+    if (!text && uploads.length === 0)
+      throw new Error("Describe the wiring or add a .txt or .pdf file first.");
+    if (text.length > 20_000) throw new Error("Description is too long.");
+    if (uploads.length > 10) throw new Error("At most 10 files per schema.");
+    const campus = campusId
+      ? await ctx.runQuery(api.campuses.list).then((all) =>
+          all.find((c) => c._id === campusId),
+        )
+      : undefined;
+
+    const sources: { title: string; text: string }[] = [];
+    if (text) {
+      await ctx.runMutation(api.sources.createPaste, {
+        campusId,
+        title: "New schema description",
+        text,
+        topic: "wiring",
+      });
+      sources.push({ title: "New schema description", text });
+    }
+    for (const upload of uploads) {
+      const blob = await ctx.storage.get(upload.storageId);
+      if (!blob) throw new Error(`${upload.title}: upload not found in storage`);
+      let extracted: string;
+      try {
+        extracted = await extractTextFromBlob(blob, upload.kind);
+      } catch (e) {
+        await ctx.storage.delete(upload.storageId);
+        throw new Error(
+          `${upload.title}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+      await ctx.runMutation(internal.sources.createExtracted, {
+        campusId,
+        title: upload.title,
+        kind: upload.kind,
+        storageId: upload.storageId,
+        text: extracted,
+        topic: "wiring",
+      });
+      sources.push({ title: upload.title, text: extracted });
+    }
+    const totalChars = sources.reduce((n, s) => n + s.text.length, 0);
+    if (totalChars > 800_000)
+      throw new Error(
+        "Source material is very large (over 800k characters). Remove or split some files.",
+      );
+
+    const { system, user } = buildGenerationPrompt({
+      kind: "wiring",
+      campusName: campus?.name ?? null,
+      sources,
+      current: "",
+    });
+    const result = await drawWiring(system, user, "new_wiring_schema");
+    return { ...result, sourceTitles: sources.map((s) => s.title) };
+  },
+});
+
 /** Admin: turn the campus's source material into a draft of one document. */
 export const generateDocument = action({
   args: {
@@ -179,21 +351,43 @@ export const generateDocument = action({
     kind: docKindValidator,
     instructions: v.optional(v.string()),
     useDraftWiring: v.optional(v.boolean()),
+    /** Wiring only: draft just the internal wiring of this device and append it. */
+    parentNodeId: v.optional(v.string()),
+    /** Limit the notes used to these sources (default: every ready note). */
+    sourceIds: v.optional(v.array(v.id("sources"))),
   },
-  handler: async (ctx, { campusId, kind, instructions, useDraftWiring }) => {
+  handler: async (
+    ctx,
+    { campusId, kind, instructions, useDraftWiring, parentNodeId, sourceIds },
+  ) => {
+    if (parentNodeId && kind !== "wiring")
+      throw new Error("Internal wiring can only be generated for the wiring graph");
     await ctx.runMutation(internal.documents.setGenerating, {
       campusId,
       kind,
       generating: true,
     });
     try {
-      const sources = await ctx.runQuery(internal.sources.readyForCampus, {
+      const allSources = await ctx.runQuery(internal.sources.readyForCampus, {
         campusId,
       });
+      const wanted = sourceIds ? new Set<string>(sourceIds) : null;
+      const sources = wanted
+        ? allSources.filter((s) => wanted.has(s.id))
+        : allSources;
       const context = await ctx.runQuery(
         internal.documents.contextForGeneration,
         { campusId, kind, useDraftWiring },
       );
+      const currentGraph =
+        kind === "wiring" ? parseWiringYaml(context.current).graph : null;
+      const parentNode = parentNodeId
+        ? currentGraph?.nodes.find((n) => n.id === parentNodeId)
+        : undefined;
+      if (parentNodeId && !parentNode)
+        throw new Error(
+          "That device is not in the approved wiring yet. Approve the wiring first, then add internal wiring to it.",
+        );
       if (
         sources.length === 0 &&
         !context.current.trim() &&
@@ -219,6 +413,9 @@ export const generateDocument = action({
             ? context.wiringYaml
             : undefined,
         instructions,
+        parentNode: parentNode
+          ? { id: parentNode.id, label: parentNode.label }
+          : undefined,
       });
 
       assertContextBudget(system, user);
@@ -242,13 +439,29 @@ export const generateDocument = action({
           throw new Error(
             "The model did not return a valid wiring graph. Try again.",
           );
-        const graph = normalizeAiGraph(response.output_parsed);
+        const generated = normalizeAiGraph(response.output_parsed);
+        const mergeNotes: string[] = [];
+        let graph = generated;
+        if (parentNode && currentGraph) {
+          const merged = mergeInternalWiring(
+            currentGraph,
+            parentNode.id,
+            generated,
+          );
+          graph = merged.graph;
+          mergeNotes.push(
+            `- Appended ${merged.added} device(s) inside ${parentNode.label}.`,
+          );
+          for (const [from, to] of Object.entries(merged.renamed))
+            mergeNotes.push(`- Renamed "${from}" to "${to}" to avoid a clash.`);
+        }
         const issues = validateGraph(graph);
         draft = wiringToYaml(
           graph,
           `${context.campusName ?? "Shared"} wiring graph. Generated ${new Date().toISOString().slice(0, 10)} from ${sources.length} source(s).`,
         );
         const noteLines = [
+          ...mergeNotes,
           ...response.output_parsed.assumptions.map((a) => `- ${a}`),
           ...issues.map((i) => `- VALIDATION: ${i}`),
         ];

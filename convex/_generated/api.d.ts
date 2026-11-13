@@ -16,6 +16,7 @@ import type * as checklist from "../checklist.js";
 import type * as documents from "../documents.js";
 import type * as extract from "../extract.js";
 import type * as fixes from "../fixes.js";
+import type * as lib_extractText from "../lib/extractText.js";
 import type * as lib_prompt from "../lib/prompt.js";
 import type * as sources from "../sources.js";
 
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   documents: typeof documents;
   extract: typeof extract;
   fixes: typeof fixes;
+  "lib/extractText": typeof lib_extractText;
   "lib/prompt": typeof lib_prompt;
   sources: typeof sources;
 }>;
